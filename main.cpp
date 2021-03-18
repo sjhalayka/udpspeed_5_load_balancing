@@ -122,7 +122,7 @@ class stats
 {
 public:
 
-	string ip_addr;
+	string ip_addr = "";
 
 	long long unsigned int total_elapsed_ticks = 0;
 	long long unsigned int total_bytes_received = 0;
@@ -130,7 +130,6 @@ public:
 	long long unsigned int last_reported_total_bytes_received = 0;
 
 	atomic<double> record_bps = 0.0;
-
 	atomic<double> bytes_per_second = 0.0;
 };
 
@@ -148,8 +147,6 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 {
 	thread_done = false;
 
-	long long unsigned int total_bytes_received = 0;
-
 	while (!stop)
 	{
 		m.lock();
@@ -164,19 +161,18 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 					continue;
 				}
 
-				std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
+				std::chrono::high_resolution_clock::time_point start_time = packets[i].time_stamp;
 
-				// Do stuff with packet buffers here
-				total_bytes_received += packets[i].packet_buf.size();
+				// Do stuff with packet buffer here
+				jobstats[packets[i].ip_addr].total_bytes_received += packets[i].packet_buf.size();
 
 				std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
 
-				const std::chrono::duration<float, std::nano> elapsed = end_time - start_time;
+				const std::chrono::duration<double, std::nano> elapsed = end_time - start_time;
 
 				static const double mbits_factor = 8.0 / (1024.0 * 1024.0);
 
-				const std::chrono::high_resolution_clock::period p;
-				const long long unsigned int ticks_per_second = p.den;
+				static const long long unsigned int ticks_per_second = 1000000000;
 
 				if (elapsed.count() > 0)
 				{
@@ -347,9 +343,12 @@ int main(int argc, char** argv)
 			return 6;
 		}
 
-		vector<job_handler> handlers(std::thread::hardware_concurrency());
+		size_t num_threads = std::thread::hardware_concurrency();
 
-		size_t index = 0;
+		vector<job_handler> handlers(num_threads);
+		map<string, size_t> ip_to_thread_map;
+
+		srand(0);
 
 		while (1)
 		{
@@ -386,18 +385,38 @@ int main(int argc, char** argv)
 				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
 				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
 
+				string ip_addr_string = oss.str();
+
+				size_t thread_index = 0;
+
+				if (ip_to_thread_map.find(ip_addr_string) == ip_to_thread_map.end())
+				{
+					thread_index = rand() % num_threads;
+
+					ip_to_thread_map[ip_addr_string] = thread_index;
+
+					handlers[thread_index].m.lock();
+					handlers[thread_index].jobstats[ip_addr_string].ip_addr = ip_addr_string;
+					handlers[thread_index].m.unlock();
+				}
+				else
+				{
+					thread_index = ip_to_thread_map[ip_addr_string];
+				}
+
 				packet p;
 				p.packet_buf = rx_buf;
 				p.packet_buf.resize(temp_bytes_received);
 				p.ip_addr = oss.str();
 				p.time_stamp = std::chrono::high_resolution_clock::now();
 
-				handlers[index % std::thread::hardware_concurrency()].m.lock();
-				handlers[index % std::thread::hardware_concurrency()].packets.push_back(p);
-				handlers[index % std::thread::hardware_concurrency()].m.unlock();
-
-				index++;
+				handlers[thread_index].m.lock();
+				handlers[thread_index].packets.push_back(p);
+				handlers[thread_index].m.unlock();
 			}
+
+
+
 
 			for (vector<job_handler>::iterator i = handlers.begin(); i != handlers.end(); i++)
 			{
