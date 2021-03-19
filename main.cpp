@@ -168,7 +168,7 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 
 				std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
 
-				const std::chrono::duration<float, std::nano> elapsed = end_time - start_time;
+				const std::chrono::duration<double, std::nano> elapsed = end_time - start_time;
 
 				static const double mbits_factor = 8.0 / (1024.0 * 1024.0);
 
@@ -180,7 +180,10 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 
 					if (jobstats[packets[i].ip_addr].total_elapsed_ticks >= jobstats[packets[i].ip_addr].last_reported_at_ticks + ticks_per_second)
 					{
-						cout << jobstats[packets[i].ip_addr].total_elapsed_ticks - jobstats[packets[i].ip_addr].last_reported_at_ticks << endl;// jobstats[packets[i].ip_addr].last_reported_at_ticks + ticks_per_second << " " << jobstats[packets[i].ip_addr].last_reported_at_ticks + ticks_per_second << endl;
+						// This should only be printed once per second, and its value should not be increasing over time.
+						// Why does this happen?
+						cout << elapsed.count() << endl;
+
 
 						//const long long unsigned int actual_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks - jobstats[packets[i].ip_addr].last_reported_at_ticks;
 						//const long long unsigned int bytes_sent_received_between_reports = jobstats[packets[i].ip_addr].total_bytes_received - jobstats[packets[i].ip_addr].last_reported_total_bytes_received;
@@ -189,9 +192,8 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 						//if (jobstats[packets[i].ip_addr].bytes_per_second > jobstats[packets[i].ip_addr].record_bps)
 						//	jobstats[packets[i].ip_addr].record_bps = jobstats[packets[i].ip_addr].bytes_per_second;
 
+
 						jobstats[packets[i].ip_addr].last_reported_at_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks;
-
-
 
 
 						//jobstats[packets[i].ip_addr].last_reported_total_bytes_received = jobstats[packets[i].ip_addr].total_bytes_received;
@@ -413,7 +415,7 @@ int main(int argc, char** argv)
 				packet p;
 				p.packet_buf = rx_buf;
 				p.packet_buf.resize(temp_bytes_received);
-				p.ip_addr = oss.str();
+				p.ip_addr = ip_addr_string;
 				p.time_stamp = std::chrono::high_resolution_clock::now();
 
 				handlers[thread_index].m.lock();
