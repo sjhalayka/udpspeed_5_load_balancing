@@ -183,7 +183,7 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 				{
 					print_start_time = print_end_time;
 
-					jobstats[packets[i].ip_addr].total_elapsed_ticks += static_cast<unsigned long long int>((packet_end_time - packet_start_time).count());
+					jobstats[packets[i].ip_addr].total_elapsed_ticks += static_cast<unsigned long long int>(print_elapsed.count());// (packet_end_time - packet_start_time).count());
 
 					const long long unsigned int actual_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks - jobstats[packets[i].ip_addr].last_reported_at_ticks;
 					const long long unsigned int bytes_sent_received_between_reports = jobstats[packets[i].ip_addr].total_bytes_received - jobstats[packets[i].ip_addr].last_reported_total_bytes_received;
@@ -195,24 +195,10 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 					jobstats[packets[i].ip_addr].last_reported_at_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks;
 					jobstats[packets[i].ip_addr].last_reported_total_bytes_received = jobstats[packets[i].ip_addr].total_bytes_received;
 
-					if (0.0 == jobstats[packets[i].ip_addr].bytes_per_second)
-					{
-						ostringstream oss;
-						oss << "  " << packets[i].ip_addr << " -- time out.";
-						return_data.push_back(oss.str());
-					}
-					else
-					{
-						ostringstream oss;
-						oss << "  " << packets[i].ip_addr << " -- " << jobstats[packets[i].ip_addr].bytes_per_second * mbits_factor << " Mbit/s, Record: " << jobstats[packets[i].ip_addr].record_bps * mbits_factor << " Mbit/s";
-						return_data.push_back(oss.str());
-					}
-
-					
-
-
+					ostringstream oss;
+					oss << "  " << packets[i].ip_addr << " -- " << jobstats[packets[i].ip_addr].bytes_per_second * mbits_factor << " Mbit/s, Record: " << jobstats[packets[i].ip_addr].record_bps * mbits_factor << " Mbit/s";
+					return_data.push_back(oss.str());
 				}
-
 			}
 
 			packets.clear();
