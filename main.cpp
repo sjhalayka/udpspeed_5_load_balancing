@@ -177,8 +177,6 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 				const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
 				const std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
 
-				std::chrono::high_resolution_clock::time_point packet_end_time = std::chrono::high_resolution_clock::now();
-
 				if (print_elapsed.count() >= ticks_per_second)
 				{
 					print_start_time = print_end_time;
