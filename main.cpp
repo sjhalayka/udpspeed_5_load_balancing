@@ -138,9 +138,6 @@ class packet
 public:
 
 	vector<char> packet_buf;
-//	double prevector_duration = 0;
-	std::chrono::high_resolution_clock::time_point start_time;
-
 	string ip_addr;
 };
 
@@ -164,8 +161,6 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 					return_data.push_back("Mismanaged packet");
 					continue;
 				}
-
-				std::chrono::high_resolution_clock::time_point packet_start_time = packets[i].start_time;
 
 				// Do stuff with packet buffer here
 				jobstats[packets[i].ip_addr].total_bytes_received += packets[i].packet_buf.size();
@@ -403,7 +398,6 @@ int main(int argc, char** argv)
 				p.packet_buf = rx_buf;
 				p.packet_buf.resize(temp_bytes_received);
 				p.ip_addr = ip_addr_string;
-				p.start_time = start_time;
 
 				handlers[thread_index].m.lock();
 				handlers[thread_index].packets.push_back(p);
