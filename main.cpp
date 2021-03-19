@@ -245,10 +245,10 @@ int main(int argc, char** argv)
 	string target_host_string = "";
 	long unsigned int port_number = 0;
 
-	const long unsigned int tx_buf_size = 1450;
+	const long unsigned int tx_buf_size = 65507;
 	vector<char> tx_buf(tx_buf_size, 0);
 
-	const long unsigned int rx_buf_size = 8196;
+	const long unsigned int rx_buf_size = 65507;
 	vector<char> rx_buf(rx_buf_size, 0);
 
 	if (!init_options(argc, argv, mode, target_host_string, port_number))
