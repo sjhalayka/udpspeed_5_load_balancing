@@ -138,12 +138,12 @@ class packet
 public:
 
 	vector<char> packet_buf;
-	std::chrono::high_resolution_clock::time_point time_stamp;
+	double prevector_duration = 0;
 	string ip_addr;
 };
 
 
-void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats> &jobstats, vector<packet>& packets, mutex& m, vector<string>& return_data)
+void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>& jobstats, vector<packet>& packets, mutex& m, vector<string>& return_data)
 {
 	thread_done = false;
 
@@ -161,55 +161,52 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 					continue;
 				}
 
-				std::chrono::high_resolution_clock::time_point start_time = packets[i].time_stamp;
+				double total_duration = packets[i].prevector_duration;
+
+				std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
 
 				// Do stuff with packet buffer here
 				jobstats[packets[i].ip_addr].total_bytes_received += packets[i].packet_buf.size();
+				// Do stuff with packet buffer here
 
 				std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
 
 				const std::chrono::duration<double, std::nano> elapsed = end_time - start_time;
 
+				total_duration += elapsed.count();
+
 				static const double mbits_factor = 8.0 / (1024.0 * 1024.0);
 
 				static const long long unsigned int ticks_per_second = 1000000000;
 
-				if (elapsed.count() > 0)
+				if (total_duration > 0)
 				{
-					jobstats[packets[i].ip_addr].total_elapsed_ticks += static_cast<unsigned long long int>(elapsed.count());
+					jobstats[packets[i].ip_addr].total_elapsed_ticks += static_cast<unsigned long long int>(total_duration);
 
 					if (jobstats[packets[i].ip_addr].total_elapsed_ticks >= jobstats[packets[i].ip_addr].last_reported_at_ticks + ticks_per_second)
 					{
-						// This should only be printed once per second, and its value should not be increasing over time.
-						// Why does this happen?
-						cout << elapsed.count() << endl;
+						const long long unsigned int actual_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks - jobstats[packets[i].ip_addr].last_reported_at_ticks;
+						const long long unsigned int bytes_sent_received_between_reports = jobstats[packets[i].ip_addr].total_bytes_received - jobstats[packets[i].ip_addr].last_reported_total_bytes_received;
+						jobstats[packets[i].ip_addr].bytes_per_second = static_cast<double>(bytes_sent_received_between_reports) / (static_cast<double>(actual_ticks) / static_cast<double>(ticks_per_second));
 
-
-						//const long long unsigned int actual_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks - jobstats[packets[i].ip_addr].last_reported_at_ticks;
-						//const long long unsigned int bytes_sent_received_between_reports = jobstats[packets[i].ip_addr].total_bytes_received - jobstats[packets[i].ip_addr].last_reported_total_bytes_received;
-						//jobstats[packets[i].ip_addr].bytes_per_second = static_cast<double>(bytes_sent_received_between_reports) / (static_cast<double>(actual_ticks) / static_cast<double>(ticks_per_second));
-
-						//if (jobstats[packets[i].ip_addr].bytes_per_second > jobstats[packets[i].ip_addr].record_bps)
-						//	jobstats[packets[i].ip_addr].record_bps = jobstats[packets[i].ip_addr].bytes_per_second;
-
+						if (jobstats[packets[i].ip_addr].bytes_per_second > jobstats[packets[i].ip_addr].record_bps)
+							jobstats[packets[i].ip_addr].record_bps = jobstats[packets[i].ip_addr].bytes_per_second;
 
 						jobstats[packets[i].ip_addr].last_reported_at_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks;
+						jobstats[packets[i].ip_addr].last_reported_total_bytes_received = jobstats[packets[i].ip_addr].total_bytes_received;
 
-
-						//jobstats[packets[i].ip_addr].last_reported_total_bytes_received = jobstats[packets[i].ip_addr].total_bytes_received;
-
-						//if (0.0 == jobstats[packets[i].ip_addr].bytes_per_second)
-						//{
-						//	ostringstream oss;
-						//	oss << "  " << packets[i].ip_addr << " -- time out.";
-						//	return_data.push_back(oss.str());
-						//}
-						//else
-						//{
-						//	ostringstream oss;
-						//	oss << "  " << packets[i].ip_addr << " -- " << jobstats[packets[i].ip_addr].bytes_per_second * mbits_factor << " Mbit/s, Record: " << jobstats[packets[i].ip_addr].record_bps * mbits_factor << " Mbit/s";
-						//	return_data.push_back(oss.str());
-						//}
+						if (0.0 == jobstats[packets[i].ip_addr].bytes_per_second)
+						{
+							ostringstream oss;
+							oss << "  " << packets[i].ip_addr << " -- time out.";
+							return_data.push_back(oss.str());
+						}
+						else
+						{
+							ostringstream oss;
+							oss << "  " << packets[i].ip_addr << " -- " << jobstats[packets[i].ip_addr].bytes_per_second * mbits_factor << " Mbit/s, Record: " << jobstats[packets[i].ip_addr].record_bps * mbits_factor << " Mbit/s";
+							return_data.push_back(oss.str());
+						}
 					}
 				}
 			}
@@ -360,6 +357,8 @@ int main(int argc, char** argv)
 
 		while (1)
 		{
+			std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
+
 			timeval timeout;
 			timeout.tv_sec = 0;
 			timeout.tv_usec = 100000; // one hundred thousand microseconds is one-tenth of a second
@@ -416,7 +415,10 @@ int main(int argc, char** argv)
 				p.packet_buf = rx_buf;
 				p.packet_buf.resize(temp_bytes_received);
 				p.ip_addr = ip_addr_string;
-				p.time_stamp = std::chrono::high_resolution_clock::now();
+
+				std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double, std::nano> elapsed = end_time - start_time;
+				p.prevector_duration = elapsed.count();
 
 				handlers[thread_index].m.lock();
 				handlers[thread_index].packets.push_back(p);
