@@ -147,7 +147,7 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 	thread_done = false;
 
 	std::chrono::high_resolution_clock::time_point print_start_time = std::chrono::high_resolution_clock::now();
-
+	
 	while (!stop)
 	{
 		m.lock();
@@ -195,6 +195,62 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 			}
 
 			packets.clear();
+		}
+
+
+		bool time_to_print = false;
+
+		for (map<string, stats>::iterator i = jobstats.begin(); i != jobstats.end(); i++)
+		{
+			static const long long unsigned int ticks_per_second = 1000000000;
+
+			const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
+
+			if (print_elapsed.count() >= ticks_per_second)
+			{
+				time_to_print = true;
+				break;
+			}
+		}
+
+		if (time_to_print)
+		{
+			time_to_print = false;
+
+			for (map<string, stats>::iterator i = jobstats.begin(); i != jobstats.end(); i++)
+			{
+				static const double mbits_factor = 8.0 / (1024.0 * 1024.0);
+				static const long long unsigned int ticks_per_second = 1000000000;
+
+				const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
+				const std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
+
+				i->second.total_elapsed_ticks += static_cast<unsigned long long int>(print_elapsed.count());
+
+				if (print_elapsed.count() > 0)
+				{
+					const long long unsigned int actual_ticks = i->second.total_elapsed_ticks - i->second.last_reported_at_ticks;
+					const long long unsigned int bytes_sent_received_between_reports = i->second.total_bytes_received - i->second.last_reported_total_bytes_received;
+					i->second.bytes_per_second = static_cast<double>(bytes_sent_received_between_reports) / (static_cast<double>(actual_ticks) / static_cast<double>(ticks_per_second));
+
+					if (i->second.bytes_per_second > i->second.record_bps)
+						i->second.record_bps = i->second.bytes_per_second;
+
+					i->second.last_reported_at_ticks = i->second.total_elapsed_ticks;
+					i->second.last_reported_total_bytes_received = i->second.total_bytes_received;
+
+					ostringstream oss;
+					oss << "  " << i->second.ip_addr << " -- " << i->second.bytes_per_second * mbits_factor << " Mbit/s, Record: " << i->second.record_bps * mbits_factor << " Mbit/s";
+					return_data.push_back(oss.str());
+				}
+
+				map<string, stats>::const_iterator fwd_iter = i;
+				fwd_iter++;
+
+				if(fwd_iter == jobstats.end())
+					print_start_time = print_end_time;
+			}
 		}
 
 		m.unlock();
