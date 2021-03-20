@@ -197,7 +197,8 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 			packets.clear();
 		}
 
-
+		// Double-check if it's time to print...
+		// this generally occurs when the bps is 0 becase no packets were received
 		bool time_to_print = false;
 
 		for (map<string, stats>::iterator i = jobstats.begin(); i != jobstats.end(); i++)
