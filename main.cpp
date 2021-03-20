@@ -165,40 +165,12 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 				// Do stuff with packet buffer here
 				jobstats[packets[i].ip_addr].total_bytes_received += packets[i].packet_buf.size();
 				// Do stuff with packet buffer here
-
-				static const double mbits_factor = 8.0 / (1024.0 * 1024.0);
-				static const long long unsigned int ticks_per_second = 1000000000;
-
-				const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
-				const std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
-
-				if (print_elapsed.count() >= ticks_per_second)
-				{
-					print_start_time = print_end_time;
-
-					jobstats[packets[i].ip_addr].total_elapsed_ticks += static_cast<unsigned long long int>(print_elapsed.count());
-
-					const long long unsigned int actual_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks - jobstats[packets[i].ip_addr].last_reported_at_ticks;
-					const long long unsigned int bytes_sent_received_between_reports = jobstats[packets[i].ip_addr].total_bytes_received - jobstats[packets[i].ip_addr].last_reported_total_bytes_received;
-					jobstats[packets[i].ip_addr].bytes_per_second = static_cast<double>(bytes_sent_received_between_reports) / (static_cast<double>(actual_ticks) / static_cast<double>(ticks_per_second));
-
-					if (jobstats[packets[i].ip_addr].bytes_per_second > jobstats[packets[i].ip_addr].record_bps)
-						jobstats[packets[i].ip_addr].record_bps = jobstats[packets[i].ip_addr].bytes_per_second;
-
-					jobstats[packets[i].ip_addr].last_reported_at_ticks = jobstats[packets[i].ip_addr].total_elapsed_ticks;
-					jobstats[packets[i].ip_addr].last_reported_total_bytes_received = jobstats[packets[i].ip_addr].total_bytes_received;
-
-					ostringstream oss;
-					oss << "  " << packets[i].ip_addr << " -- " << jobstats[packets[i].ip_addr].bytes_per_second * mbits_factor << " Mbit/s, Record: " << jobstats[packets[i].ip_addr].record_bps * mbits_factor << " Mbit/s";
-					return_data.push_back(oss.str());
-				}
 			}
 
 			packets.clear();
 		}
 
-		// Double-check if it's time to print...
-		// this generally occurs when the bps is 0 because no packets were received
+		// Check if it's time to print
 		bool time_to_print = false;
 
 		for (map<string, stats>::iterator i = jobstats.begin(); i != jobstats.end(); i++)
