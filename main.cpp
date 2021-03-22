@@ -432,12 +432,12 @@ int main(int argc, char** argv)
 						}
 					}
 
-					print_start_time = print_end_time;
-
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
 
 					handlers[t].m.unlock();
 				}
+
+				print_start_time = print_end_time;
 
 				// Abort at the first sign of cyclical behaviour -- use a map to store previous "instructions", where an instruction
 				// consists of the previous and next thread and the job size
