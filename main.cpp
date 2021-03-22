@@ -146,8 +146,6 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 {
 	thread_done = false;
 
-	std::chrono::high_resolution_clock::time_point print_start_time = std::chrono::high_resolution_clock::now();
-	
 	while (!stop)
 	{
 		m.lock();
@@ -345,10 +343,10 @@ int main(int argc, char** argv)
 				}
 
 				ostringstream oss;
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				oss << rand() % 256;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				oss << "127.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
+				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
+				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
+				oss << rand() % 4;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
 
 				string ip_addr_string = oss.str();
 
@@ -392,6 +390,8 @@ int main(int argc, char** argv)
 
 					double per_thread_total_bps = 0;
 
+					cout << handlers[t].jobstats.size() << endl;
+
 					for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
 					{
 						const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
@@ -422,16 +422,24 @@ int main(int argc, char** argv)
 
 					handlers[t].m.unlock();
 				}
+
+				// Update data
+
+				// Abort at the first sign of cyclical behaviour -- use a map to store previous "instructions", where an instruction
+				// consists of the previous and next thread and the job size
+
+				// find first candidate thread -- the candidate thread consists of more than one job
+				// find thread with smallest total bps
+
+				bool found_optimization = false;
+
+				do
+				{
+
+
+				} while (found_optimization);
+
 			}
-				
-			// Update data
-
-			// Abort at the first sign of cyclical behaviour -- use a map to store previous "instructions", where an instruction
-			// consists of the previous and next thread and the job size
-
-			// find first candidate thread -- the candidate thread consists of more than one job
-			// find thread with smallest total bps
-
 		}
 	}
 
