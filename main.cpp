@@ -348,7 +348,7 @@ int main(int argc, char** argv)
 				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
 				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
 				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				oss << rand() % 256;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
 
 				string ip_addr_string = oss.str();
 
@@ -379,42 +379,37 @@ int main(int argc, char** argv)
 				handlers[thread_index].m.unlock();
 			}
 
-			// Print return data
-			for (size_t t = 0; t < num_threads; t++)
+			static const long long unsigned int ticks_per_second = 1000000000;
+
+			const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
+
+			if (print_elapsed.count() >= ticks_per_second)
 			{
-				double per_thread_total_bps = 0;
-				bool print_stuff = false;
-
-				for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
+				for (size_t t = 0; t < num_threads; t++)
 				{
-					static const long long unsigned int ticks_per_second = 1000000000;
+					handlers[t].m.lock();
 
-					const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
-					std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
+					double per_thread_total_bps = 0;
 
-					if (print_elapsed.count() >= ticks_per_second)
+					for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
 					{
 						const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
 						const std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
 
 						i->second.total_elapsed_ticks += static_cast<unsigned long long int>(print_elapsed.count());
 
-						if (print_elapsed.count() > 0)
-						{
-							print_stuff = true;
+						const long long unsigned int actual_ticks = i->second.total_elapsed_ticks - i->second.last_reported_at_ticks;
+						const long long unsigned int bytes_sent_received_between_reports = i->second.total_bytes_received - i->second.last_reported_total_bytes_received;
+						i->second.bytes_per_second = static_cast<double>(bytes_sent_received_between_reports) / (static_cast<double>(actual_ticks) / static_cast<double>(ticks_per_second));
 
-							const long long unsigned int actual_ticks = i->second.total_elapsed_ticks - i->second.last_reported_at_ticks;
-							const long long unsigned int bytes_sent_received_between_reports = i->second.total_bytes_received - i->second.last_reported_total_bytes_received;
-							i->second.bytes_per_second = static_cast<double>(bytes_sent_received_between_reports) / (static_cast<double>(actual_ticks) / static_cast<double>(ticks_per_second));
+						if (i->second.bytes_per_second > i->second.record_bps)
+							i->second.record_bps = i->second.bytes_per_second;
 
-							if (i->second.bytes_per_second > i->second.record_bps)
-								i->second.record_bps = i->second.bytes_per_second;
+						i->second.last_reported_at_ticks = i->second.total_elapsed_ticks;
+						i->second.last_reported_total_bytes_received = i->second.total_bytes_received;
 
-							i->second.last_reported_at_ticks = i->second.total_elapsed_ticks;
-							i->second.last_reported_total_bytes_received = i->second.total_bytes_received;
-
-							per_thread_total_bps += i->second.bytes_per_second;
-						}
+						per_thread_total_bps += i->second.bytes_per_second;
 
 						map<string, stats>::const_iterator fwd_iter = i;
 						fwd_iter++;
@@ -422,26 +417,15 @@ int main(int argc, char** argv)
 						if (fwd_iter == handlers[t].jobstats.end())
 							print_start_time = print_end_time;
 					}
-				}
 
-				if(print_stuff)
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
 
+					handlers[t].m.unlock();
+				}
 			}
+				
+			// Update data
 
-
-
-			//for (vector<job_handler>::iterator i = handlers.begin(); i != handlers.end(); i++)
-			//{
-			//	i->m.lock();
-
-			//	for (size_t j = 0; j < i->log.size(); j++)
-			//		cout << i->log[j] << endl;
-
-			//	i->log.clear();
-
-			//	i->m.unlock();
-			//}
 		}
 	}
 
