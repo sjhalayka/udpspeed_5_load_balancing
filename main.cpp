@@ -311,7 +311,8 @@ int main(int argc, char** argv)
 		vector<job_handler> handlers(num_threads);
 		map<string, size_t> ip_to_thread_map;
 
-		static const double mbits_factor = 8.0 / (1024.0 * 1024.0);
+		const double mbits_factor = 8.0 / (1024.0 * 1024.0);
+		const long long unsigned int ticks_per_second = 1000000000;
 
 		srand(0);
 
@@ -383,8 +384,6 @@ int main(int argc, char** argv)
 				handlers[thread_index].packets.push_back(p);
 				handlers[thread_index].m.unlock();
 			}
-
-			static const long long unsigned int ticks_per_second = 1000000000;
 
 			const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
