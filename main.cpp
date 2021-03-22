@@ -390,13 +390,8 @@ int main(int argc, char** argv)
 
 					double per_thread_total_bps = 0;
 
-					cout << handlers[t].jobstats.size() << endl;
-
 					for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
 					{
-						const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
-						const std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
-
 						i->second.total_elapsed_ticks += static_cast<unsigned long long int>(print_elapsed.count());
 
 						const long long unsigned int actual_ticks = i->second.total_elapsed_ticks - i->second.last_reported_at_ticks;
@@ -438,7 +433,6 @@ int main(int argc, char** argv)
 
 
 				} while (found_optimization);
-
 			}
 		}
 	}
