@@ -345,15 +345,15 @@ int main(int argc, char** argv)
 				}
 
 				ostringstream oss;
-				//oss << "127.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
-				//oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
-				//oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				//oss << rand() % 256;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				oss << "127.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
+				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
+				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
+				oss << rand() % 256;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
 
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
+				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
+				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
+				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
 
 				string ip_addr_string = oss.str();
 
@@ -398,7 +398,7 @@ int main(int argc, char** argv)
 
 					double per_thread_total_bps = 0;
 
-					for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
+					for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end();)
 					{
 						i->second.total_elapsed_ticks += static_cast<unsigned long long int>(print_elapsed.count());
 
@@ -415,13 +415,20 @@ int main(int argc, char** argv)
 						per_thread_total_bps += i->second.bytes_per_second;
 
 						if (i->second.bytes_per_second != 0)
+						{
 							i->second.last_nonzero_update = i->second.total_elapsed_ticks;
+							i++;
+						}
 						else
 						{
 							if (i->second.total_elapsed_ticks - i->second.last_nonzero_update > (ticks_per_second * 10))
 							{
 								ip_to_thread_map.erase(ip_to_thread_map.find(i->second.ip_addr));
 								i = handlers[t].jobstats.erase(i);
+							}
+							else
+							{
+								i++;
 							}
 						}
 					}
