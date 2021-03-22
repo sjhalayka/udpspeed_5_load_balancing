@@ -526,11 +526,6 @@ int main(int argc, char** argv)
 					double average = 0;
 					vector<double> bps;
 
-
-					//handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*min_iter);
-					//ip_to_thread_map[min_iter->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
-
-
 					for (size_t t = 0; t < num_threads; t++)
 					{
 						double per_thread_total_bps = 0;
@@ -589,7 +584,7 @@ int main(int argc, char** argv)
 						break;
 
 					// Find iterator to smallest job
-					double min_job_size = DBL_MAX;
+					//double min_job_size = DBL_MAX;
 
 					map<string, stats>::const_iterator min_iter = handlers[candidate_thread_id].jobstats.begin();
 
@@ -603,28 +598,31 @@ int main(int argc, char** argv)
 					//}
 
 					// Have we done this move before?
-					job_handler_move_data move_data;
-					move_data.source_thread = candidate_thread_id;
-					move_data.destination_thread = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
-					move_data.job_size = min_iter->second.bytes_per_second;
+					//job_handler_move_data move_data;
+					//move_data.source_thread = candidate_thread_id;
+					//move_data.destination_thread = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
+					//move_data.job_size = min_iter->second.bytes_per_second;
 
-					map<job_handler_move_data, size_t>::const_iterator ci = job_handler_move_data_map.find(move_data);
+					//map<job_handler_move_data, size_t>::const_iterator ci = job_handler_move_data_map.find(move_data);
 
 					// If found cyclical behaviour, abort
-					if (ci != job_handler_move_data_map.end())
-						break;
-					else
-						job_handler_move_data_map[move_data]++;
+					//if (ci != job_handler_move_data_map.end())
+					//	break;
+					//else
+					//	job_handler_move_data_map[move_data]++;
 
 					// Add job
+					stats old_dest_stats = min_iter->second;
 					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*min_iter);
 
-					// Assign IP
+					// Back up and assign IP
+					size_t old_thread_id = ip_to_thread_map[min_iter->second.ip_addr];
+					string old_ip_address = min_iter->second.ip_addr;
 					ip_to_thread_map[min_iter->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
 
 					// Erase job
+					stats old_source_stats = handlers[candidate_thread_id].jobstats.find(min_iter->second.ip_addr)->second;
 					handlers[candidate_thread_id].jobstats.erase(min_iter);
-
 
 					double pre_std_dev = standard_deviation(bps);
 
@@ -647,11 +645,39 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					cout << "Post mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
+//					cout << "Post mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
 
-					if (standard_deviation(bps) > pre_std_dev)
+					if (standard_deviation(bps) >= pre_std_dev)
 					{
-						// backtrack
+						// Roll back
+						handlers[candidate_thread_id].jobstats.insert(std::pair<string, stats>(old_ip_address, old_dest_stats));
+
+						ip_to_thread_map[old_ip_address] = old_thread_id;
+
+						handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.erase(
+							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(old_ip_address));
+
+						average = 0;
+						bps.clear();
+
+						for (size_t t = 0; t < num_threads; t++)
+						{
+							double per_thread_total_bps = 0;
+
+							for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
+								per_thread_total_bps += i->second.bytes_per_second;
+
+							per_thread_total_bps *= mbits_factor;
+
+							bps.push_back(per_thread_total_bps);
+
+							average += per_thread_total_bps;
+						}
+
+						average /= num_threads;
+
+						cout << "Roll back mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
+
 						break;
 					}
 				}
