@@ -426,6 +426,12 @@ int main(int argc, char** argv)
 				
 			// Update data
 
+			// Abort at the first sign of cyclical behaviour -- use a map to store previous "instructions", where an instruction
+			// consists of the previous and next thread and the job size
+
+			// find first candidate thread -- the candidate thread consists of more than one job
+			// find thread with smallest total bps
+
 		}
 	}
 
