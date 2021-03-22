@@ -13,6 +13,7 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <algorithm>
 using namespace std;
 
 
@@ -117,6 +118,32 @@ void cleanup(void)
 	// shut down winsock
 	WSACleanup();
 }
+
+class thread_loads
+{
+public:
+
+	vector<double> loads;
+	size_t thread_id;
+
+	double total(void) const
+	{
+		double t = 0;
+
+		for (size_t i = 0; i < loads.size(); i++)
+			t += loads[i];
+
+		return t;
+	}
+
+	bool operator<(const thread_loads& rhs)
+	{
+		if (total() < rhs.total())
+			return true;
+
+		return false;
+	}
+};
 
 class stats
 {
@@ -280,7 +307,7 @@ int main(int argc, char** argv)
 		cout << "  Thread count: " << std::thread::hardware_concurrency() << endl;
 		cout << "  Receiving on UDP port " << port_number << " - CTRL+C to exit." << endl;
 
-		std::chrono::high_resolution_clock::time_point print_start_time = std::chrono::high_resolution_clock::now();
+		std::chrono::high_resolution_clock::time_point update_start_time = std::chrono::high_resolution_clock::now();
 
 		struct sockaddr_in my_addr;
 		struct sockaddr_in their_addr;
@@ -385,21 +412,22 @@ int main(int argc, char** argv)
 				handlers[thread_index].m.unlock();
 			}
 
-			const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
+			const std::chrono::high_resolution_clock::time_point update_end_time = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double, std::nano> update_elapsed = update_end_time - update_start_time;
 
 			// Update data once per second
-			if (print_elapsed.count() >= ticks_per_second)
+			if (update_elapsed.count() >= ticks_per_second)
 			{
 				for (size_t t = 0; t < num_threads; t++)
-				{
 					handlers[t].m.lock();
 
+				for (size_t t = 0; t < num_threads; t++)
+				{
 					double per_thread_total_bps = 0;
 
 					for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end();)
 					{
-						i->second.total_elapsed_ticks += static_cast<unsigned long long int>(print_elapsed.count());
+						i->second.total_elapsed_ticks += static_cast<unsigned long long int>(update_elapsed.count());
 
 						const long long unsigned int actual_ticks = i->second.total_elapsed_ticks - i->second.last_reported_at_ticks;
 						const long long unsigned int bytes_sent_received_between_reports = i->second.total_bytes_received - i->second.last_reported_total_bytes_received;
@@ -420,7 +448,8 @@ int main(int argc, char** argv)
 						}
 						else
 						{
-							if (i->second.total_elapsed_ticks - i->second.last_nonzero_update > (ticks_per_second * 10))
+							// kill job
+							if ((i->second.total_elapsed_ticks - i->second.last_nonzero_update) > (ticks_per_second * 10))
 							{
 								ip_to_thread_map.erase(ip_to_thread_map.find(i->second.ip_addr));
 								i = handlers[t].jobstats.erase(i);
@@ -433,25 +462,58 @@ int main(int argc, char** argv)
 					}
 
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
-
-					handlers[t].m.unlock();
 				}
-
-				print_start_time = print_end_time;
 
 				// Abort at the first sign of cyclical behaviour -- use a map to store previous "instructions", where an instruction
 				// consists of the previous and next thread and the job size
 
 				// find first candidate thread -- the candidate thread consists of more than one job
 				// find thread with smallest total bps
-
-				bool found_optimization = false;
-
-				do
+				while(1)
 				{
+					vector<thread_loads> thread_loads_vec;
+
+					for (size_t t = 0; t < num_threads; t++)
+					{
+						thread_loads tl;
+
+						tl.thread_id = t;
+
+						for (map<string, stats>::const_iterator ci = handlers[t].jobstats.begin(); ci != handlers[t].jobstats.end(); ci++)
+							tl.loads.push_back(ci->second.bytes_per_second);
+
+						thread_loads_vec.push_back(tl);
+					}
+					
+					sort(thread_loads_vec.begin(), thread_loads_vec.end());
+
+					bool found_candidate = false;
+
+					for (size_t i = 0; i < thread_loads_vec.size(); i++)
+					{
+						if (handlers[thread_loads_vec[i].thread_id].jobstats.size() > 1)
+						{
+							cout << "found candidate " << thread_loads_vec[i].thread_id;
+							found_candidate = true;
+							break;
+						}
+
+						cout << thread_loads_vec[i].thread_id << " " << thread_loads_vec[i].total() * mbits_factor << endl;
+					}
+
+					if (false == found_candidate)
+						break;
 
 
-				} while (found_optimization);
+
+					cout << "found candidate" << endl;
+
+				}
+
+				update_start_time = update_end_time;
+
+				for (size_t t = 0; t < num_threads; t++)
+					handlers[t].m.unlock();
 			}
 		}
 	}
