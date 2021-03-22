@@ -382,6 +382,7 @@ int main(int argc, char** argv)
 			const std::chrono::high_resolution_clock::time_point print_end_time = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double, std::nano> print_elapsed = print_end_time - print_start_time;
 
+			// Update data once per second
 			if (print_elapsed.count() >= ticks_per_second)
 			{
 				for (size_t t = 0; t < num_threads; t++)
@@ -417,8 +418,6 @@ int main(int argc, char** argv)
 
 					handlers[t].m.unlock();
 				}
-
-				// Update data
 
 				// Abort at the first sign of cyclical behaviour -- use a map to store previous "instructions", where an instruction
 				// consists of the previous and next thread and the job size
