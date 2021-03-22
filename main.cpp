@@ -14,6 +14,7 @@
 #include <mutex>
 #include <atomic>
 #include <algorithm>
+#include <cfloat>
 using namespace std;
 
 
@@ -204,6 +205,35 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 }
 
 
+class job_handler_move_data
+{
+public:
+
+	size_t source_thread = 0;
+	size_t destination_thread = 0;
+	double job_size = 0;
+
+	bool operator<(const job_handler_move_data& right) const
+	{
+		if (right.source_thread > source_thread)
+			return true;
+		else if (right.source_thread < source_thread)
+			return false;
+
+		if (right.destination_thread > destination_thread)
+			return true;
+		else if (right.destination_thread < destination_thread)
+			return false;
+
+		if (right.job_size > job_size)
+			return true;
+		else if (right.job_size < job_size)
+			return false;
+
+		return false;
+	}
+};
+
 class job_handler
 {
 public:
@@ -373,10 +403,10 @@ int main(int argc, char** argv)
 				}
 
 				ostringstream oss;
-				oss << "127.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
-				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
-				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				oss << rand() % 256;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				oss << "127.";
+				oss << "0.";
+				oss << "0.";
+				oss << rand() % 256;
 
 				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
 				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
@@ -464,11 +494,8 @@ int main(int argc, char** argv)
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
 				}
 
-				// Abort at the first sign of cyclical behaviour -- use a map to store previous "instructions", where an instruction
-				// consists of the previous and next thread and the job size
+				map<job_handler_move_data, size_t> job_handler_move_data_map;
 
-				// find first candidate thread -- the candidate thread consists of more than one job
-				// find thread with smallest total bps
 				while(1)
 				{
 					vector<thread_loads> thread_loads_vec;
@@ -485,29 +512,67 @@ int main(int argc, char** argv)
 						thread_loads_vec.push_back(tl);
 					}
 					
-					sort(thread_loads_vec.begin(), thread_loads_vec.end());
+					// Sort in reverse order by total
+					sort(thread_loads_vec.rbegin(), thread_loads_vec.rend());
 
+					// Find candidate thread
 					bool found_candidate = false;
+					size_t candidate_thread_id = 0;
 
 					for (size_t i = 0; i < thread_loads_vec.size(); i++)
 					{
 						if (handlers[thread_loads_vec[i].thread_id].jobstats.size() > 1)
 						{
-							cout << "found candidate " << thread_loads_vec[i].thread_id;
 							found_candidate = true;
+							candidate_thread_id = thread_loads_vec[i].thread_id;
 							break;
 						}
-
-						cout << thread_loads_vec[i].thread_id << " " << thread_loads_vec[i].total() * mbits_factor << endl;
 					}
 
+					// If no threads had more than 1 job, then abort
 					if (false == found_candidate)
 						break;
 
+					// If the candidate thread is the last element in the vector, then abort
+					if (candidate_thread_id == thread_loads_vec[thread_loads_vec.size() - 1].thread_id)
+						break;
 
+					// Find iterator to smallest job
+					double min_job_size = DBL_MAX;
 
-					cout << "found candidate" << endl;
+					map<string, stats>::const_iterator min_iter = handlers[candidate_thread_id].jobstats.begin();
 
+					for (map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin(); ci != handlers[candidate_thread_id].jobstats.end(); ci++)
+					{
+						if (ci->second.bytes_per_second < min_job_size)
+						{
+							min_job_size = ci->second.bytes_per_second;
+							min_iter = ci;
+						}
+					}
+
+					// Have we done this move before?
+					job_handler_move_data move_data;
+					move_data.source_thread = candidate_thread_id;
+					move_data.destination_thread = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
+					move_data.job_size = min_iter->second.bytes_per_second;
+
+					map<job_handler_move_data, size_t>::const_iterator ci = job_handler_move_data_map.find(move_data);
+
+					// If found cyclical behaviour, abort
+					if (ci != job_handler_move_data_map.end())
+						break;
+					else
+						job_handler_move_data_map[move_data]++;
+
+					// Add job
+					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*min_iter);
+
+					// Assign IP
+					ip_to_thread_map[min_iter->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
+
+					// Erase job
+					handlers[candidate_thread_id].jobstats.erase(min_iter);
 				}
 
 				update_start_time = update_end_time;
