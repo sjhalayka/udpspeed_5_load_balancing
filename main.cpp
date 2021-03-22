@@ -346,7 +346,7 @@ int main(int argc, char** argv)
 				oss << "127.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
 				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
 				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				oss << rand() % 4;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				oss << rand() % 256;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
 
 				string ip_addr_string = oss.str();
 
