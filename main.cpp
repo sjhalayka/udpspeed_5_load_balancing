@@ -129,6 +129,8 @@ public:
 	long long unsigned int last_reported_at_ticks = 0;
 	long long unsigned int last_reported_total_bytes_received = 0;
 
+	long long unsigned int last_nonzero_update = 0;
+
 	double record_bps = 0.0;
 	double bytes_per_second = 0.0;
 };
@@ -343,10 +345,15 @@ int main(int argc, char** argv)
 				}
 
 				ostringstream oss;
-				oss << "127.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
-				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
-				oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				oss << rand() % 256;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				//oss << "127.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
+				//oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
+				//oss << "0.";// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
+				//oss << rand() % 256;// static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+
+				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
+				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
+				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
+				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
 
 				string ip_addr_string = oss.str();
 
@@ -407,12 +414,19 @@ int main(int argc, char** argv)
 
 						per_thread_total_bps += i->second.bytes_per_second;
 
-						map<string, stats>::const_iterator fwd_iter = i;
-						fwd_iter++;
-
-						if (fwd_iter == handlers[t].jobstats.end())
-							print_start_time = print_end_time;
+						if (i->second.bytes_per_second != 0)
+							i->second.last_nonzero_update = i->second.total_elapsed_ticks;
+						else
+						{
+							if (i->second.total_elapsed_ticks - i->second.last_nonzero_update > (ticks_per_second * 10))
+							{
+								ip_to_thread_map.erase(ip_to_thread_map.find(i->second.ip_addr));
+								i = handlers[t].jobstats.erase(i);
+							}
+						}
 					}
+
+					print_start_time = print_end_time;
 
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
 
