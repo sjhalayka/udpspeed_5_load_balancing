@@ -265,6 +265,29 @@ public:
 	}
 };
 
+double standard_deviation(const vector<double>& src)
+{
+	double mean = 0;
+	double size = static_cast<double>(src.size());
+
+	for (size_t i = 0; i < src.size(); i++)
+		mean += src[i];
+
+	mean /= size;
+
+	double sq_diff = 0;
+
+	for (size_t i = 0; i < src.size(); i++)
+	{
+		double diff = src[i] - mean;
+		sq_diff += diff * diff;
+	}
+
+	sq_diff /= size;
+
+	return sqrt(sq_diff);
+}
+
 
 int main(int argc, char** argv)
 {
@@ -445,12 +468,13 @@ int main(int argc, char** argv)
 			const std::chrono::high_resolution_clock::time_point update_end_time = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double, std::nano> update_elapsed = update_end_time - update_start_time;
 
-			// Update data once per second
+			// Update data and do load balancing once per second
 			if (update_elapsed.count() >= ticks_per_second)
 			{
 				for (size_t t = 0; t < num_threads; t++)
 					handlers[t].m.lock();
 
+				// Update data
 				for (size_t t = 0; t < num_threads; t++)
 				{
 					double per_thread_total_bps = 0;
@@ -494,10 +518,37 @@ int main(int argc, char** argv)
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
 				}
 
+				// Do load balancing
 				map<job_handler_move_data, size_t> job_handler_move_data_map;
 
 				while(1)
 				{
+					double average = 0;
+					vector<double> bps;
+
+
+					//handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*min_iter);
+					//ip_to_thread_map[min_iter->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
+
+
+					for (size_t t = 0; t < num_threads; t++)
+					{
+						double per_thread_total_bps = 0;
+
+						for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
+							per_thread_total_bps += i->second.bytes_per_second;
+
+						per_thread_total_bps *= mbits_factor;
+
+						bps.push_back(per_thread_total_bps);
+
+						average += per_thread_total_bps;
+					}
+
+					average /= num_threads;
+
+					cout << "Pre mean: " << average << " +/- " << standard_deviation(bps) << endl;
+
 					vector<thread_loads> thread_loads_vec;
 
 					for (size_t t = 0; t < num_threads; t++)
@@ -542,14 +593,14 @@ int main(int argc, char** argv)
 
 					map<string, stats>::const_iterator min_iter = handlers[candidate_thread_id].jobstats.begin();
 
-					for (map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin(); ci != handlers[candidate_thread_id].jobstats.end(); ci++)
-					{
-						if (ci->second.bytes_per_second < min_job_size)
-						{
-							min_job_size = ci->second.bytes_per_second;
-							min_iter = ci;
-						}
-					}
+					//for (map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin(); ci != handlers[candidate_thread_id].jobstats.end(); ci++)
+					//{
+					//	if (ci->second.bytes_per_second < min_job_size)
+					//	{
+					//		min_job_size = ci->second.bytes_per_second;
+					//		min_iter = ci;
+					//	}
+					//}
 
 					// Have we done this move before?
 					job_handler_move_data move_data;
@@ -573,6 +624,36 @@ int main(int argc, char** argv)
 
 					// Erase job
 					handlers[candidate_thread_id].jobstats.erase(min_iter);
+
+
+					double pre_std_dev = standard_deviation(bps);
+
+					average = 0;
+					bps.clear();
+
+					for (size_t t = 0; t < num_threads; t++)
+					{
+						double per_thread_total_bps = 0;
+
+						for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
+							per_thread_total_bps += i->second.bytes_per_second;
+
+						per_thread_total_bps *= mbits_factor;
+
+						bps.push_back(per_thread_total_bps);
+
+						average += per_thread_total_bps;
+					}
+
+					average /= num_threads;
+
+					cout << "Post mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
+
+					if (standard_deviation(bps) > pre_std_dev)
+					{
+						// backtrack
+						break;
+					}
 				}
 
 				update_start_time = update_end_time;
