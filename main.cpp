@@ -583,32 +583,20 @@ int main(int argc, char** argv)
 					if (candidate_thread_id == thread_loads_vec[thread_loads_vec.size() - 1].thread_id)
 						break;
 
-					// Find iterator to smallest job
-					//double min_job_size = DBL_MAX;
-
-					map<string, stats>::const_iterator min_iter = handlers[candidate_thread_id].jobstats.begin();
-
-					//for (map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin(); ci != handlers[candidate_thread_id].jobstats.end(); ci++)
-					//{
-					//	if (ci->second.bytes_per_second < min_job_size)
-					//	{
-					//		min_job_size = ci->second.bytes_per_second;
-					//		min_iter = ci;
-					//	}
-					//}
+					map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin();
 
 					// Add job
-					stats old_dest_stats = min_iter->second;
-					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*min_iter);
+					stats old_dest_stats = ci->second;
+					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*ci);
 
 					// Back up and assign IP
-					size_t old_thread_id = ip_to_thread_map[min_iter->second.ip_addr];
-					string old_ip_address = min_iter->second.ip_addr;
-					ip_to_thread_map[min_iter->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
+					size_t old_thread_id = ip_to_thread_map[ci->second.ip_addr];
+					string old_ip_address = ci->second.ip_addr;
+					ip_to_thread_map[ci->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
 
 					// Erase job
-					stats old_source_stats = handlers[candidate_thread_id].jobstats.find(min_iter->second.ip_addr)->second;
-					handlers[candidate_thread_id].jobstats.erase(min_iter);
+					stats old_source_stats = handlers[candidate_thread_id].jobstats.find(ci->second.ip_addr)->second;
+					handlers[candidate_thread_id].jobstats.erase(ci);
 
 					double pre_std_dev = standard_deviation(bps);
 
