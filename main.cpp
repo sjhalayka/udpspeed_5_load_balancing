@@ -597,20 +597,6 @@ int main(int argc, char** argv)
 					//	}
 					//}
 
-					// Have we done this move before?
-					//job_handler_move_data move_data;
-					//move_data.source_thread = candidate_thread_id;
-					//move_data.destination_thread = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
-					//move_data.job_size = min_iter->second.bytes_per_second;
-
-					//map<job_handler_move_data, size_t>::const_iterator ci = job_handler_move_data_map.find(move_data);
-
-					// If found cyclical behaviour, abort
-					//if (ci != job_handler_move_data_map.end())
-					//	break;
-					//else
-					//	job_handler_move_data_map[move_data]++;
-
 					// Add job
 					stats old_dest_stats = min_iter->second;
 					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*min_iter);
@@ -645,8 +631,6 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-//					cout << "Post mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
-
 					if (standard_deviation(bps) >= pre_std_dev)
 					{
 						// Roll back
@@ -676,7 +660,7 @@ int main(int argc, char** argv)
 
 						average /= num_threads;
 
-						cout << "Roll back mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
+						cout << "Mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
 
 						break;
 					}
