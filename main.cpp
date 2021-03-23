@@ -491,6 +491,7 @@ int main(int argc, char** argv)
 				// Do load balancing
 				while(1)
 				{
+					// Get pre-move mean and standard deviation
 					double average = 0;
 					vector<double> bps;
 
@@ -510,8 +511,9 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					cout << "Start mean: " << average << " +/- " << standard_deviation(bps) << endl;
+					cout << "Temporary mean: " << average << " +/- " << standard_deviation(bps) << endl;
 
+					// Enumerate thread loads
 					vector<thread_loads> thread_loads_vec;
 
 					for (size_t t = 0; t < num_threads; t++)
@@ -537,6 +539,7 @@ int main(int argc, char** argv)
 					{
 						if (handlers[thread_loads_vec[i].thread_id].jobstats.size() > 1)
 						{
+							// This will still happen on a dead IP until that IP is timed out for 10 seconds and erased
 							found_candidate = true;
 							candidate_thread_id = thread_loads_vec[i].thread_id;
 							break;
@@ -555,19 +558,19 @@ int main(int argc, char** argv)
 					// This is as good as picking an iterator randomly from sorted jobs
 					map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin();
 					
-					// Add job
+					// Back up and add job
 					stats old_dest_stats = ci->second;
 					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*ci);
 
 					// Back up and assign IP
 					size_t old_thread_id = ip_to_thread_map[ci->second.ip_addr];
-					string old_ip_address = ci->second.ip_addr;
+					string ip_address_string = ci->second.ip_addr;
 					ip_to_thread_map[ci->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
 
 					// Erase job
-					stats old_source_stats = handlers[candidate_thread_id].jobstats.find(ci->second.ip_addr)->second;
 					handlers[candidate_thread_id].jobstats.erase(ci);
 
+					// Get post-move mean and standard deviation
 					double pre_std_dev = standard_deviation(bps);
 
 					average = 0;
@@ -589,17 +592,19 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
+					// Found minimum
 					if (standard_deviation(bps) >= pre_std_dev)
 					{
 						// Roll back
-						handlers[candidate_thread_id].jobstats.insert(std::pair<string, stats>(old_ip_address, old_dest_stats));
+						handlers[candidate_thread_id].jobstats.insert(std::pair<string, stats>(ip_address_string, old_dest_stats));
 
-						ip_to_thread_map[old_ip_address] = old_thread_id;
+						ip_to_thread_map[ip_address_string] = old_thread_id;
 
 						handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.erase(
-							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(old_ip_address)
+							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(ip_address_string)
 						);
 
+						// Get final mean and standard deviation
 						average = 0;
 						bps.clear();
 
@@ -619,7 +624,7 @@ int main(int argc, char** argv)
 
 						average /= num_threads;
 
-						cout << "End mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
+						cout << "Final mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
 
 						break;
 					}
