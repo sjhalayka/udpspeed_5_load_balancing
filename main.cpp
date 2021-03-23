@@ -542,7 +542,7 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					cout << "Pre mean: " << average << " +/- " << standard_deviation(bps) << endl;
+					cout << "Start mean: " << average << " +/- " << standard_deviation(bps) << endl;
 
 					vector<thread_loads> thread_loads_vec;
 
@@ -627,7 +627,8 @@ int main(int argc, char** argv)
 						ip_to_thread_map[old_ip_address] = old_thread_id;
 
 						handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.erase(
-							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(old_ip_address));
+							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(old_ip_address)
+						);
 
 						average = 0;
 						bps.clear();
@@ -648,7 +649,7 @@ int main(int argc, char** argv)
 
 						average /= num_threads;
 
-						cout << "Mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
+						cout << "End mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
 
 						break;
 					}
