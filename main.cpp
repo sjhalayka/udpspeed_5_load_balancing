@@ -146,11 +146,54 @@ public:
 	}
 };
 
+class IPv4_address
+{
+public:
+	unsigned char byte0, byte1, byte2, byte3;
+
+	inline bool operator<(const IPv4_address& right) const
+	{
+		if (right.byte0 > byte0)
+			return true;
+		else if (right.byte0 < byte0)
+			return false;
+
+		if (right.byte1 > byte1)
+			return true;
+		else if (right.byte1 < byte1)
+			return false;
+
+		if (right.byte2 > byte2)
+			return true;
+		else if (right.byte2 < byte2)
+			return false;
+
+		if (right.byte3 > byte3)
+			return true;
+		else if (right.byte3 < byte3)
+			return false;
+
+		return false;
+	}
+
+	string get_string(void)
+	{
+		ostringstream oss;
+
+		oss << static_cast<int>(byte0) << ".";
+		oss << static_cast<int>(byte1) << ".";
+		oss << static_cast<int>(byte2) << ".";
+		oss << static_cast<int>(byte3);
+
+		return oss.str();
+	}
+};
+
 class stats
 {
 public:
 
-	string ip_addr = "";
+	IPv4_address ip_addr;
 
 	long long unsigned int total_elapsed_ticks = 0;
 	long long unsigned int total_bytes_received = 0;
@@ -168,11 +211,11 @@ class packet
 public:
 
 	vector<char> packet_buf;
-	string ip_addr;
+	IPv4_address ip_addr;
 };
 
 
-void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>& jobstats, vector<packet>& packets, mutex& m, vector<string>& return_data)
+void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<IPv4_address, stats>& jobstats, vector<packet>& packets, mutex& m, vector<string>& return_data)
 {
 	thread_done = false;
 
@@ -213,7 +256,7 @@ public:
 	atomic_bool thread_done = false;
 	mutex m;
 
-	map<string, stats> jobstats;
+	map<IPv4_address, stats> jobstats;
 	vector<packet> packets;
 	vector<string> log;
 
@@ -359,7 +402,7 @@ int main(int argc, char** argv)
 		size_t num_threads = std::thread::hardware_concurrency();
 
 		vector<job_handler> handlers(num_threads);
-		map<string, size_t> ip_to_thread_map;
+		map<IPv4_address, size_t> ip_to_thread_map;
 
 		const double mbits_factor = 8.0 / (1024.0 * 1024.0);
 		const long long unsigned int ticks_per_second = 1000000000;
@@ -395,40 +438,42 @@ int main(int argc, char** argv)
 					return 8;
 				}
 
-				ostringstream oss;
-				//oss << "127.";
-				//oss << "0.";
-				//oss << "0.";
-				//oss << rand() % 256;
+				IPv4_address client_address;
+				client_address.byte0 = their_addr.sin_addr.S_un.S_un_b.s_b1;
+				client_address.byte1 = their_addr.sin_addr.S_un.S_un_b.s_b2;
+				client_address.byte2 = their_addr.sin_addr.S_un.S_un_b.s_b3;
+				client_address.byte3 = their_addr.sin_addr.S_un.S_un_b.s_b4;
 
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				// Use a pseudorandom IP to emulate many clients
+				// This is to be used only for testing purposes
+				//client_address.byte0 = 127;
+				//client_address.byte1 = 0;
+				//client_address.byte2 = 0;
+				//client_address.byte3 = rand()%256;
 
-				string ip_addr_string = oss.str();
+				//string ip_addr_string = oss.str();
 
 				size_t thread_index = 0;
 
-				if (ip_to_thread_map.find(ip_addr_string) == ip_to_thread_map.end())
+				if (ip_to_thread_map.find(client_address) == ip_to_thread_map.end())
 				{
 					thread_index = rand() % num_threads;
 
-					ip_to_thread_map[ip_addr_string] = thread_index;
+					ip_to_thread_map[client_address] = thread_index;
 
 					handlers[thread_index].m.lock();
-					handlers[thread_index].jobstats[ip_addr_string].ip_addr = ip_addr_string;
+					handlers[thread_index].jobstats[client_address].ip_addr = client_address;
 					handlers[thread_index].m.unlock();
 				}
 				else
 				{
-					thread_index = ip_to_thread_map[ip_addr_string];
+					thread_index = ip_to_thread_map[client_address];
 				}
 
 				packet p;
 				p.packet_buf = rx_buf;
 				p.packet_buf.resize(temp_bytes_received);
-				p.ip_addr = ip_addr_string;
+				p.ip_addr = client_address;
 
 				handlers[thread_index].m.lock();
 				handlers[thread_index].packets.push_back(p);
@@ -449,7 +494,7 @@ int main(int argc, char** argv)
 				{
 					double per_thread_total_bps = 0;
 
-					for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end();)
+					for (map<IPv4_address, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end();)
 					{
 						i->second.total_elapsed_ticks += static_cast<unsigned long long int>(update_elapsed.count());
 
@@ -499,7 +544,7 @@ int main(int argc, char** argv)
 					{
 						double per_thread_total_bps = 0;
 
-						for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
+						for (map<IPv4_address, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
 							per_thread_total_bps += i->second.bytes_per_second;
 
 						per_thread_total_bps *= mbits_factor;
@@ -522,7 +567,7 @@ int main(int argc, char** argv)
 
 						tl.thread_id = t;
 
-						for (map<string, stats>::const_iterator ci = handlers[t].jobstats.begin(); ci != handlers[t].jobstats.end(); ci++)
+						for (map<IPv4_address, stats>::const_iterator ci = handlers[t].jobstats.begin(); ci != handlers[t].jobstats.end(); ci++)
 							tl.loads.push_back(ci->second.bytes_per_second);
 
 						thread_loads_vec.push_back(tl);
@@ -556,7 +601,7 @@ int main(int argc, char** argv)
 
 					// Jobs are not sorted, so just grab an iterator to the first element
 					// This is as good as picking an iterator randomly from sorted jobs
-					map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin();
+					map<IPv4_address, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin();
 					
 					// Back up and add job
 					stats old_dest_stats = ci->second;
@@ -564,7 +609,7 @@ int main(int argc, char** argv)
 
 					// Back up and assign IP
 					size_t old_thread_id = ip_to_thread_map[ci->second.ip_addr];
-					string ip_address_string = ci->second.ip_addr;
+					IPv4_address ip_address = ci->second.ip_addr;
 					ip_to_thread_map[ci->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
 
 					// Erase job
@@ -580,7 +625,7 @@ int main(int argc, char** argv)
 					{
 						double per_thread_total_bps = 0;
 
-						for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
+						for (map<IPv4_address, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
 							per_thread_total_bps += i->second.bytes_per_second;
 
 						per_thread_total_bps *= mbits_factor;
@@ -596,12 +641,12 @@ int main(int argc, char** argv)
 					if (standard_deviation(bps) >= pre_std_dev)
 					{
 						// Roll back
-						handlers[candidate_thread_id].jobstats.insert(std::pair<string, stats>(ip_address_string, old_dest_stats));
+						handlers[candidate_thread_id].jobstats.insert(std::pair<IPv4_address, stats>(ip_address, old_dest_stats));
 
-						ip_to_thread_map[ip_address_string] = old_thread_id;
+						ip_to_thread_map[ip_address] = old_thread_id;
 
 						handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.erase(
-							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(ip_address_string)
+							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(ip_address)
 						);
 
 						// Get final mean and standard deviation
@@ -612,7 +657,7 @@ int main(int argc, char** argv)
 						{
 							double per_thread_total_bps = 0;
 
-							for (map<string, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
+							for (map<IPv4_address, stats>::iterator i = handlers[t].jobstats.begin(); i != handlers[t].jobstats.end(); i++)
 								per_thread_total_bps += i->second.bytes_per_second;
 
 							per_thread_total_bps *= mbits_factor;
