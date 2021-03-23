@@ -584,7 +584,7 @@ int main(int argc, char** argv)
 						break;
 
 					map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin();
-
+					
 					// Add job
 					stats old_dest_stats = ci->second;
 					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*ci);
