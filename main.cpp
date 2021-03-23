@@ -204,36 +204,6 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<string, stats>
 	thread_done = true;
 }
 
-
-class job_handler_move_data
-{
-public:
-
-	size_t source_thread = 0;
-	size_t destination_thread = 0;
-	double job_size = 0;
-
-	bool operator<(const job_handler_move_data& right) const
-	{
-		if (right.source_thread > source_thread)
-			return true;
-		else if (right.source_thread < source_thread)
-			return false;
-
-		if (right.destination_thread > destination_thread)
-			return true;
-		else if (right.destination_thread < destination_thread)
-			return false;
-
-		if (right.job_size > job_size)
-			return true;
-		else if (right.job_size < job_size)
-			return false;
-
-		return false;
-	}
-};
-
 class job_handler
 {
 public:
@@ -519,8 +489,6 @@ int main(int argc, char** argv)
 				}
 
 				// Do load balancing
-				map<job_handler_move_data, size_t> job_handler_move_data_map;
-
 				while(1)
 				{
 					double average = 0;
@@ -583,6 +551,8 @@ int main(int argc, char** argv)
 					if (candidate_thread_id == thread_loads_vec[thread_loads_vec.size() - 1].thread_id)
 						break;
 
+					// Jobs are not sorted, so just grab an iterator to the first element
+					// This is as good as picking an iterator randomly from sorted jobs
 					map<string, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin();
 					
 					// Add job
