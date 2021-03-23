@@ -396,15 +396,15 @@ int main(int argc, char** argv)
 				}
 
 				ostringstream oss;
-				oss << "127.";
-				oss << "0.";
-				oss << "0.";
-				oss << rand() % 256;
+				//oss << "127.";
+				//oss << "0.";
+				//oss << "0.";
+				//oss << rand() % 256;
 
-				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
-				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
-				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
-				//oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
+				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b1) << ".";
+				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b2) << ".";
+				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b3) << ".";
+				oss << static_cast<int>(their_addr.sin_addr.S_un.S_un_b.s_b4);
 
 				string ip_addr_string = oss.str();
 
