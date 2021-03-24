@@ -137,9 +137,9 @@ public:
 		return t;
 	}
 
-	bool operator<(const thread_loads& rhs)
+	bool operator<(const thread_loads& right) const
 	{
-		if (total() < rhs.total())
+		if (total() < right.total())
 			return true;
 
 		return false;
