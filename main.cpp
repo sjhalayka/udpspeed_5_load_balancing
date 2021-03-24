@@ -450,8 +450,8 @@ int main(int argc, char** argv)
 				// This is to be used only for testing purposes
 				//client_address.byte0 = 127;
 				//client_address.byte1 = 0;
-				//client_address.byte2 = mt_rand() % 256;
-				//client_address.byte3 = mt_rand()%256;
+				//client_address.byte2 = 0;//mt_rand() % 256;
+				//client_address.byte3 = mt_rand() % 256;
 
 				size_t thread_index = 0;
 
@@ -532,8 +532,6 @@ int main(int argc, char** argv)
 
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
 				}
-
-				size_t load_balancing_passes = 0;
 
 				// Do load balancing
 				while(1)
@@ -657,7 +655,7 @@ int main(int argc, char** argv)
 					average /= num_threads;
 
 					// Found (a probably local) minimum -- revert back to it and then abort
-					if (standard_deviation(bps) >= pre_std_dev && load_balancing_passes > 0)
+					if (standard_deviation(bps) >= pre_std_dev)
 					{
 						// Roll back changes
 						handlers[candidate_thread_id].jobstats.insert(std::pair<IPv4_address, stats>(ip_address, old_dest_stats));
@@ -692,8 +690,6 @@ int main(int argc, char** argv)
 
 						break;
 					}
-
-					load_balancing_passes++;
 				}
 
 				// Set up timer for next update
