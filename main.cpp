@@ -556,7 +556,7 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					cout << "Temporary mean: " << average << " +/- " << standard_deviation(bps) << endl;
+					//cout << "During load balancing, the mean is: " << average << " +/- " << standard_deviation(bps) << endl;
 
 					// Enumerate thread loads
 					vector<thread_loads> thread_loads_vec(num_threads);
@@ -683,7 +683,7 @@ int main(int argc, char** argv)
 
 						average /= num_threads;
 
-						cout << "Final mean: " << average << " +/- " << standard_deviation(bps) << endl << endl;
+						cout << "After load balancing, the mean is: " << average << " +/- " << standard_deviation(bps) << endl;
 
 						break;
 					}
