@@ -14,7 +14,8 @@
 #include <mutex>
 #include <atomic>
 #include <algorithm>
-#include <cfloat>
+#include <random>
+#include <ctime>
 using namespace std;
 
 
@@ -306,6 +307,8 @@ int main(int argc, char** argv)
 {
 	cout << endl << "udpspeed_5 1.0 - UDP speed tester" << endl << "Copyright 2021, Shawn Halayka" << endl << endl;
 
+	mt19937 mt_rand(static_cast<unsigned int>(time(0)));
+
 	program_mode mode = receive_mode;
 
 	string target_host_string = "";
@@ -407,8 +410,6 @@ int main(int argc, char** argv)
 		const double mbits_factor = 8.0 / (1024.0 * 1024.0);
 		const long long unsigned int ticks_per_second = 1000000000;
 
-		srand(0);
-
 		while (1)
 		{
 			timeval timeout;
@@ -449,13 +450,13 @@ int main(int argc, char** argv)
 				//client_address.byte0 = 127;
 				//client_address.byte1 = 0;
 				//client_address.byte2 = 0;
-				//client_address.byte3 = rand()%256;
+				//client_address.byte3 = mt_rand()%256;
 
 				size_t thread_index = 0;
 
 				if (ip_to_thread_map.find(client_address) == ip_to_thread_map.end())
 				{
-					thread_index = rand() % num_threads;
+					thread_index = mt_rand() % num_threads;
 
 					ip_to_thread_map[client_address] = thread_index;
 
@@ -531,6 +532,8 @@ int main(int argc, char** argv)
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
 				}
 
+				size_t load_balancing_passes = 0;
+
 				// Do load balancing
 				while(1)
 				{
@@ -591,27 +594,33 @@ int main(int argc, char** argv)
 
 					// If no threads had more than 1 job, then abort
 					if (false == found_candidate)
+					{
+						cout << "No candidate found. aborting" << endl;
 						break;
+					}
 
 					// If the candidate thread is the last element in the vector, then abort
 					if (candidate_thread_id == thread_loads_vec[thread_loads_vec.size() - 1].thread_id)
+					{
+						cout << "Candidate is last in vector. aborting" << endl;
 						break;
+					}
 
-					// Jobs are not sorted, so just grab an iterator to the first element
-					// This is as good as picking an iterator randomly from sorted jobs
-					map<IPv4_address, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin();
-					
+					// Psuedorandomly pick a job
+					map<IPv4_address, stats>::const_iterator job_iter = handlers[candidate_thread_id].jobstats.begin();
+					advance(job_iter, mt_rand() % handlers[candidate_thread_id].jobstats.size());
+
 					// Back up and add job
-					stats old_dest_stats = ci->second;
-					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*ci);
+					stats old_dest_stats = job_iter->second;
+					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*job_iter);
 
 					// Back up and assign IP
-					size_t old_thread_id = ip_to_thread_map[ci->second.ip_addr];
-					IPv4_address ip_address = ci->second.ip_addr;
-					ip_to_thread_map[ci->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
+					size_t old_thread_id = ip_to_thread_map[job_iter->second.ip_addr];
+					IPv4_address ip_address = job_iter->second.ip_addr;
+					ip_to_thread_map[job_iter->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
 
 					// Erase job
-					handlers[candidate_thread_id].jobstats.erase(ci);
+					handlers[candidate_thread_id].jobstats.erase(job_iter);
 
 					// Get post-move mean and standard deviation
 					double pre_std_dev = standard_deviation(bps);
@@ -636,7 +645,7 @@ int main(int argc, char** argv)
 					average /= num_threads;
 
 					// Found (a probably local) minimum -- revert back to it and then abort
-					if (standard_deviation(bps) >= pre_std_dev)
+					if (standard_deviation(bps) >= pre_std_dev && load_balancing_passes > 0)
 					{
 						// Roll back changes
 						handlers[candidate_thread_id].jobstats.insert(std::pair<IPv4_address, stats>(ip_address, old_dest_stats));
@@ -671,6 +680,8 @@ int main(int argc, char** argv)
 
 						break;
 					}
+
+					load_balancing_passes++;
 				}
 
 				// Set up timer for next update
