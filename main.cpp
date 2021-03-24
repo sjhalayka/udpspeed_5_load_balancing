@@ -593,18 +593,11 @@ int main(int argc, char** argv)
 
 					// If no threads had more than 1 job, then abort
 					if (false == found_candidate)
-					{
-						cout << "No candidate found. aborting" << endl;
 						break;
-					}
 
 					// If the candidate thread is the last element in the vector, then abort
 					if (candidate_thread_id == thread_loads_vec[thread_loads_vec.size() - 1].thread_id)
-					{
-						cout << "Candidate is last in vector. aborting" << endl;
 						break;
-					}
-
 
 					// Pick smallest active job
 					double smallest_job_size = DBL_MAX;
