@@ -176,7 +176,7 @@ public:
 		return false;
 	}
 
-	string get_string(void)
+	string get_string(void) const
 	{
 		ostringstream oss;
 
