@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <random>
 #include <ctime>
+#include <cfloat>
 using namespace std;
 
 
@@ -447,10 +448,10 @@ int main(int argc, char** argv)
 
 				// Use a pseudorandom IP to emulate many clients
 				// This is to be used only for testing purposes
-				//client_address.byte0 = 127;
-				//client_address.byte1 = 0;
-				//client_address.byte2 = 0;
-				//client_address.byte3 = mt_rand()%256;
+				client_address.byte0 = 127;
+				client_address.byte1 = 0;
+				client_address.byte2 = mt_rand() % 256;
+				client_address.byte3 = mt_rand()%256;
 
 				size_t thread_index = 0;
 
@@ -606,9 +607,20 @@ int main(int argc, char** argv)
 						break;
 					}
 
-					// Psuedorandomly pick a job
-					map<IPv4_address, stats>::const_iterator job_iter = handlers[candidate_thread_id].jobstats.begin();
-					advance(job_iter, mt_rand() % handlers[candidate_thread_id].jobstats.size());
+
+					// Pick smallest active job
+					double smallest_job_size = DBL_MAX;
+
+					map<IPv4_address, stats>::const_iterator job_iter;
+
+					for (map<IPv4_address, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin(); ci != handlers[candidate_thread_id].jobstats.end(); ci++)
+					{
+						if (ci->second.bytes_per_second < smallest_job_size && ci->second.bytes_per_second != 0)
+						{
+							job_iter = ci;
+							smallest_job_size = ci->second.bytes_per_second;
+						}
+					}
 
 					// Back up and add job
 					stats old_dest_stats = job_iter->second;
