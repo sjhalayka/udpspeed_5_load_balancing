@@ -515,7 +515,7 @@ int main(int argc, char** argv)
 						}
 						else
 						{
-							// Kill job after 10 seconds of inactivity
+							// Erase job after 10 seconds of inactivity
 							if ((i->second.total_elapsed_ticks - i->second.last_nonzero_update) > (ticks_per_second * 10))
 							{
 								ip_to_thread_map.erase(ip_to_thread_map.find(i->second.ip_addr));
