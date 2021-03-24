@@ -448,10 +448,10 @@ int main(int argc, char** argv)
 
 				// Use a pseudorandom IP to emulate many clients
 				// This is to be used only for testing purposes
-				client_address.byte0 = 127;
-				client_address.byte1 = 0;
-				client_address.byte2 = mt_rand() % 256;
-				client_address.byte3 = mt_rand()%256;
+				//client_address.byte0 = 127;
+				//client_address.byte1 = 0;
+				//client_address.byte2 = mt_rand() % 256;
+				//client_address.byte3 = mt_rand()%256;
 
 				size_t thread_index = 0;
 
