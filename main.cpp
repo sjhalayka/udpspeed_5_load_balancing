@@ -557,7 +557,7 @@ int main(int argc, char** argv)
 					cout << "Temporary mean: " << average << " +/- " << standard_deviation(bps) << endl;
 
 					// Enumerate thread loads
-					vector<thread_loads> thread_loads_vec;
+					vector<thread_loads> thread_loads_vec(num_threads);
 
 					for (size_t t = 0; t < num_threads; t++)
 					{
@@ -568,7 +568,7 @@ int main(int argc, char** argv)
 						for (map<IPv4_address, stats>::const_iterator ci = handlers[t].jobstats.begin(); ci != handlers[t].jobstats.end(); ci++)
 							tl.loads.push_back(ci->second.bytes_per_second);
 
-						thread_loads_vec.push_back(tl);
+						thread_loads_vec[t] = tl;
 					}
 					
 					// Sort in reverse order by total
