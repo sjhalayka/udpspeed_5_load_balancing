@@ -515,7 +515,7 @@ int main(int argc, char** argv)
 						}
 						else
 						{
-							// kill job
+							// Kill job if timed out
 							if ((i->second.total_elapsed_ticks - i->second.last_nonzero_update) > (ticks_per_second * 10))
 							{
 								ip_to_thread_map.erase(ip_to_thread_map.find(i->second.ip_addr));
