@@ -599,10 +599,10 @@ int main(int argc, char** argv)
 					if (candidate_thread_id == thread_loads_vec[thread_loads_vec.size() - 1].thread_id)
 						break;
 
-					// Pick smallest active job
+					// Pick smallest active (non-zero) job
 					double smallest_job_size = DBL_MAX;
 
-					map<IPv4_address, stats>::const_iterator job_iter;
+					map<IPv4_address, stats>::const_iterator job_iter = handlers[candidate_thread_id].jobstats.end();
 
 					for (map<IPv4_address, stats>::const_iterator ci = handlers[candidate_thread_id].jobstats.begin(); ci != handlers[candidate_thread_id].jobstats.end(); ci++)
 					{
@@ -612,6 +612,10 @@ int main(int argc, char** argv)
 							smallest_job_size = ci->second.bytes_per_second;
 						}
 					}
+
+					// If no suitable job found, then abort
+					if (job_iter == handlers[candidate_thread_id].jobstats.end())
+						break;
 
 					// Back up and add job
 					stats old_dest_stats = job_iter->second;
