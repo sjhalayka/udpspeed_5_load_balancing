@@ -451,8 +451,6 @@ int main(int argc, char** argv)
 				//client_address.byte2 = 0;
 				//client_address.byte3 = rand()%256;
 
-				//string ip_addr_string = oss.str();
-
 				size_t thread_index = 0;
 
 				if (ip_to_thread_map.find(client_address) == ip_to_thread_map.end())
@@ -637,10 +635,10 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					// Found minimum
+					// Found (local) minimum
 					if (standard_deviation(bps) >= pre_std_dev)
 					{
-						// Roll back
+						// Roll back changes
 						handlers[candidate_thread_id].jobstats.insert(std::pair<IPv4_address, stats>(ip_address, old_dest_stats));
 
 						ip_to_thread_map[ip_address] = old_thread_id;
@@ -675,6 +673,7 @@ int main(int argc, char** argv)
 					}
 				}
 
+				// Set up timer for next update
 				update_start_time = update_end_time;
 
 				for (size_t t = 0; t < num_threads; t++)
