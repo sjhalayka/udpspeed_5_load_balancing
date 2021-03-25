@@ -685,6 +685,7 @@ int main(int argc, char** argv)
 
 						cout << "After load balancing, the mean is:  " << average << " +/- " << standard_deviation(bps) << " Mbits/second" << endl;
 
+						// Success!
 						break;
 					}
 				}
