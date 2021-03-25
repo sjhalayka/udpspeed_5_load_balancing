@@ -420,6 +420,7 @@ int main(int argc, char** argv)
 			FD_ZERO(&fds);
 			FD_SET(udp_socket, &fds);
 
+			// Take a peek at the socket. Are there data to be read?
 			int select_ret = select(0, &fds, 0, 0, &timeout);
 
 			if (SOCKET_ERROR == select_ret)
@@ -432,6 +433,7 @@ int main(int argc, char** argv)
 			{
 				int temp_bytes_received = 0;
 
+				// Read the data 
 				if (SOCKET_ERROR == (temp_bytes_received = recvfrom(udp_socket, &rx_buf[0], rx_buf_size, 0, reinterpret_cast<struct sockaddr*>(&their_addr), &addr_len)))
 				{
 					cout << "  Socket recvfrom error." << endl;
@@ -439,6 +441,7 @@ int main(int argc, char** argv)
 					return 8;
 				}
 
+				// Get the client's IP address
 				IPv4_address client_address;
 				client_address.byte0 = their_addr.sin_addr.S_un.S_un_b.s_b1;
 				client_address.byte1 = their_addr.sin_addr.S_un.S_un_b.s_b2;
@@ -454,8 +457,10 @@ int main(int argc, char** argv)
 
 				size_t thread_index = 0;
 
+				// This client IP is not currently being handled by a job
 				if (ip_to_thread_map.find(client_address) == ip_to_thread_map.end())
 				{
+					// Pseudorandomly pick a thread to handle the new job
 					thread_index = mt_rand() % num_threads;
 
 					ip_to_thread_map[client_address] = thread_index;
@@ -466,6 +471,7 @@ int main(int argc, char** argv)
 				}
 				else
 				{
+					// Look up thread index
 					thread_index = ip_to_thread_map[client_address];
 				}
 
@@ -479,17 +485,17 @@ int main(int argc, char** argv)
 				handlers[thread_index].m.unlock();
 			}
 
+			// Has it been one second second since the last time the data were updated / load balanced / printed?
 			const std::chrono::high_resolution_clock::time_point update_end_time = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double, std::nano> update_elapsed = update_end_time - update_start_time;
 
-			// Update data and do load balancing once per second
 			if (update_elapsed.count() >= ticks_per_second)
 			{
 				// Lock all threads
 				for (size_t t = 0; t < num_threads; t++)
 					handlers[t].m.lock();
 
-				// Update data
+				// Update data -- work with units of Bytes/second to save on multiplication operations
 				for (size_t t = 0; t < num_threads; t++)
 				{
 					double per_thread_total_bps = 0;
@@ -533,7 +539,7 @@ int main(int argc, char** argv)
 					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbits/second" << endl;
 				}
 
-				// Do load balancing
+				// Do load balancing -- work with units of Mbits/second because we will be printing the data to the screen
 				while(1)
 				{
 					// Get pre-move mean and standard deviation
