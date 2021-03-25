@@ -181,7 +181,6 @@ public:
 	string get_string(void) const
 	{
 		ostringstream oss;
-
 		oss << static_cast<int>(byte0) << ".";
 		oss << static_cast<int>(byte1) << ".";
 		oss << static_cast<int>(byte2) << ".";
@@ -202,7 +201,7 @@ public:
 	long long unsigned int last_reported_at_ticks = 0;
 	long long unsigned int last_reported_total_bytes_received = 0;
 
-	long long unsigned int last_nonzero_update = 0;
+	long long unsigned int last_nonzero_update_ticks = 0;
 
 	double record_bps = 0.0;
 	double bytes_per_second = 0.0;
@@ -486,6 +485,7 @@ int main(int argc, char** argv)
 			// Update data and do load balancing once per second
 			if (update_elapsed.count() >= ticks_per_second)
 			{
+				// Lock all threads
 				for (size_t t = 0; t < num_threads; t++)
 					handlers[t].m.lock();
 
@@ -512,13 +512,13 @@ int main(int argc, char** argv)
 
 						if (i->second.bytes_per_second != 0)
 						{
-							i->second.last_nonzero_update = i->second.total_elapsed_ticks;
+							i->second.last_nonzero_update_ticks = i->second.total_elapsed_ticks;
 							i++;
 						}
 						else
 						{
 							// Erase job after 10 seconds of inactivity
-							if ((i->second.total_elapsed_ticks - i->second.last_nonzero_update) > (ticks_per_second * 10))
+							if ((i->second.total_elapsed_ticks - i->second.last_nonzero_update_ticks) > (ticks_per_second * 10))
 							{
 								ip_to_thread_map.erase(ip_to_thread_map.find(i->second.ip_addr));
 								i = handlers[t].jobstats.erase(i);
@@ -693,6 +693,7 @@ int main(int argc, char** argv)
 				// Set up timer for next update
 				update_start_time = update_end_time;
 
+				// Unlock all threads
 				for (size_t t = 0; t < num_threads; t++)
 					handlers[t].m.unlock();
 			}
