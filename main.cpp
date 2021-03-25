@@ -542,6 +542,12 @@ int main(int argc, char** argv)
 				// Do load balancing -- work with units of Mbits/second because we will be printing the data to the screen
 				while(1)
 				{
+					// Basically, this loop body finds the busiest thread, and then moves that thread's smallest non-zero job
+					// to the least busiest thread
+					// Once the move has occurred, the new post-move standard deviation is compared to the old pre-move standard deviation,
+					// and if the new post-move standard deviation is greater than the old pre-move standard deviation, then the move is undone
+					// and the algorithm is finished because the (perhaps local) minimum has been found
+
 					// Get pre-move mean and standard deviation
 					double average = 0;
 					vector<double> bps;
@@ -660,7 +666,7 @@ int main(int argc, char** argv)
 					// Finally, we found (a probably local) minimum -- revert back to it and then abort
 					if (standard_deviation(bps) >= pre_std_dev)
 					{
-						// Roll back changes
+						// Undo changes
 						handlers[candidate_thread_id].jobstats.insert(std::pair<IPv4_address, stats>(ip_address, old_dest_stats));
 
 						ip_to_thread_map[ip_address] = old_thread_id;
