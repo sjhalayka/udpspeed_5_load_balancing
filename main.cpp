@@ -305,7 +305,7 @@ double standard_deviation(const vector<double>& src)
 
 int main(int argc, char** argv)
 {
-	cout << endl << "udpspeed_5 1.0 - UDP speed tester" << endl << "Copyright 2021, Shawn Halayka" << endl << endl;
+	cout << endl << "udpspeed_5 1.0 - UDP speed tester" << endl << "Copyright 2021, Shawn Halayka (sjhalayka@gmail.com)" << endl << "This code is in the public domain!" << endl << endl;
 
 	mt19937 mt_rand(static_cast<unsigned int>(time(0)));
 
