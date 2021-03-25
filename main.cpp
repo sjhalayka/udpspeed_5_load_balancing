@@ -450,7 +450,7 @@ int main(int argc, char** argv)
 				// This is to be used only for testing purposes
 				//client_address.byte0 = 127;
 				//client_address.byte1 = 0;
-				//client_address.byte2 = 0;//mt_rand() % 256;
+				//client_address.byte2 = 0; //mt_rand() % 256;
 				//client_address.byte3 = mt_rand() % 256;
 
 				size_t thread_index = 0;
@@ -530,7 +530,7 @@ int main(int argc, char** argv)
 						}
 					}
 
-					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbit/s" << endl;
+					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbits/second" << endl;
 				}
 
 				// Do load balancing
@@ -556,7 +556,7 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					//cout << "During load balancing, the mean is: " << average << " +/- " << standard_deviation(bps) << endl;
+					cout << "During load balancing, the mean is: " << average << " +/- " << standard_deviation(bps) << " Mbits/second" << endl;
 
 					// Enumerate thread loads
 					vector<thread_loads> thread_loads_vec(num_threads);
@@ -683,7 +683,7 @@ int main(int argc, char** argv)
 
 						average /= num_threads;
 
-						cout << "After load balancing, the mean is: " << average << " +/- " << standard_deviation(bps) << endl;
+						cout << "After load balancing, the mean is:  " << average << " +/- " << standard_deviation(bps) << " Mbits/second" << endl;
 
 						break;
 					}
