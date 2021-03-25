@@ -588,7 +588,7 @@ int main(int argc, char** argv)
 					// Sort in reverse order by total
 					sort(thread_loads_vec.rbegin(), thread_loads_vec.rend());
 
-					// Find candidate thread
+					// Find candidate (busiest) thread
 					bool found_candidate = false;
 					size_t candidate_thread_id = 0;
 
