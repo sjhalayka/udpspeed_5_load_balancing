@@ -657,7 +657,7 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					// Found (a probably local) minimum -- revert back to it and then abort
+					// Finally, we found (a probably local) minimum -- revert back to it and then abort
 					if (standard_deviation(bps) >= pre_std_dev)
 					{
 						// Roll back changes
