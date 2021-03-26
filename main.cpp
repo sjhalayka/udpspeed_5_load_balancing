@@ -485,7 +485,7 @@ int main(int argc, char** argv)
 				handlers[thread_index].m.unlock();
 			}
 
-			// Has it been one second second since the last time the data were updated / load balanced / printed?
+			// Has it been one second since the last time the data were updated / load balanced / printed?
 			const std::chrono::high_resolution_clock::time_point update_end_time = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double, std::nano> update_elapsed = update_end_time - update_start_time;
 
