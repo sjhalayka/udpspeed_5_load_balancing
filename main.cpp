@@ -229,7 +229,7 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<IPv4_address, 
 			for (size_t i = 0; i < packets.size(); i++)
 			{
 				// If something went wrong when setting up this job, then send a string to the log
-				// This behaviour is exceptional, and so this entire if {} can be commented out to save on cycles
+				// This behaviour is exceptional, and so this entire if {} can generally be commented out to save on cycles
 				if (jobstats.find(packets[i].ip_addr) == jobstats.end())
 				{
 					return_data.push_back("Mismanaged packet");
