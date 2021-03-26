@@ -607,7 +607,7 @@ int main(int argc, char** argv)
 					if (false == found_candidate)
 						break;
 
-					// If the candidate thread is the last element in the vector, then abort
+					// If the candidate thread (most busiest) is the last element in the vector (least busiest), then abort
 					if (candidate_thread_id == thread_loads_vec[thread_loads_vec.size() - 1].thread_id)
 						break;
 
