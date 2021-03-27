@@ -212,11 +212,11 @@ class packet
 public:
 
 	vector<char> packet_buf;
-	IPv4_address ip_addr;
+	IPv4_address sender_ip_addr;
 };
 
 
-void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<IPv4_address, stats>& jobstats, vector<packet>& packets, mutex& m, vector<string>& return_data)
+void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<IPv4_address, stats>& jobstats, vector<packet>& packets, mutex& m)
 {
 	thread_done = false;
 
@@ -228,17 +228,17 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<IPv4_address, 
 		{
 			for (size_t i = 0; i < packets.size(); i++)
 			{
-				// If something went wrong when setting up this job, then send a string to the log
-				// This behaviour is exceptional, and so this entire if {} can generally be commented out to save on cycles
-				if (jobstats.find(packets[i].ip_addr) == jobstats.end())
-				{
-					return_data.push_back("Mismanaged packet");
-					continue;
-				}
+				// If something went wrong when setting up this job, then send a string to the console
+				// This is useful for testing purposes, but really, this behaviour is exceptional, 
+				// and so this entire if {} can generally be commented out to save on a few CPU cycles
+				//if (jobstats.find(packets[i].sender_ip_addr) == jobstats.end())
+				//{
+				//	cout << "Mismanaged packet" << endl;
+				//	continue;
+				//}
 
-				// Do stuff with packet buffer here
-				jobstats[packets[i].ip_addr].total_bytes_received += packets[i].packet_buf.size();
-				// Do stuff with packet buffer here
+				// Anyway, do stuff with packet buffer here
+				jobstats[packets[i].sender_ip_addr].total_bytes_received += packets[i].packet_buf.size();
 			}
 
 			packets.clear();
@@ -261,11 +261,10 @@ public:
 
 	map<IPv4_address, stats> jobstats;
 	vector<packet> packets;
-	vector<string> log;
 
 	job_handler(void)
 	{
-		t = thread(thread_func, ref(stop), ref(thread_done), ref(jobstats), ref(packets), ref(m), ref(log));
+		t = thread(thread_func, ref(stop), ref(thread_done), ref(jobstats), ref(packets), ref(m));
 	}
 
 	~job_handler(void)
@@ -307,7 +306,9 @@ double standard_deviation(const vector<double>& src)
 
 int main(int argc, char** argv)
 {
-	cout << endl << "udpspeed_5 1.0 - UDP speed tester" << endl << "Copyright 2021, Shawn Halayka (sjhalayka@gmail.com)" << endl << "This code is in the public domain!" << endl << endl;
+	cout << endl << "udpspeed_5 1.0 - UDP speed tester" << endl
+				<< "Circa 2021 -- Shawn Halayka (sjhalayka@gmail.com)" << endl
+				<< "This code is in the public domain!" << endl << endl;
 
 	mt19937 mt_rand(static_cast<unsigned int>(time(0)));
 
@@ -483,7 +484,7 @@ int main(int argc, char** argv)
 				packet p;
 				p.packet_buf = rx_buf;
 				p.packet_buf.resize(temp_bytes_received);
-				p.ip_addr = client_address;
+				p.sender_ip_addr = client_address;
 
 				handlers[thread_index].m.lock();
 				handlers[thread_index].packets.push_back(p);
