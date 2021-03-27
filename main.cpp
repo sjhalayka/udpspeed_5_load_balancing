@@ -450,8 +450,8 @@ int main(int argc, char** argv)
 				client_address.byte2 = their_addr.sin_addr.S_un.S_un_b.s_b3;
 				client_address.byte3 = their_addr.sin_addr.S_un.S_un_b.s_b4;
 
-				// Instead of using the client's actual IP address, use a pseudorandom IP
-				// address to emulate many hundreds or thousands of clients
+				// Instead of using the client's actual IP address, use a pseudorandom 
+				// IP address to emulate many hundreds or thousands of clients
 				// This is useful for testing purposes
 				//client_address.byte0 = 127;
 				//client_address.byte1 = 0;
@@ -478,7 +478,8 @@ int main(int argc, char** argv)
 					// Look up thread index
 					thread_index = ip_to_thread_map[client_address];
 				}
-
+				
+				// Feed packet to thread
 				packet p;
 				p.packet_buf = rx_buf;
 				p.packet_buf.resize(temp_bytes_received);
@@ -491,7 +492,7 @@ int main(int argc, char** argv)
 
 			// Has it been one second since the last time the data were updated / load balanced / printed?
 			const std::chrono::high_resolution_clock::time_point update_end_time = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double, std::nano> update_elapsed = update_end_time - update_start_time;
+			const std::chrono::duration<double, std::nano> update_elapsed = update_end_time - update_start_time;
 
 			if (update_elapsed.count() >= ticks_per_second)
 			{
@@ -670,12 +671,11 @@ int main(int argc, char** argv)
 					// Finally, we found a minimum -- revert back to it and then abort
 					if (standard_deviation(bps) >= pre_std_dev)
 					{
-						// Undo changes
+						// Undo move
 						handlers[candidate_thread_id].jobstats.insert(std::pair<IPv4_address, stats>(ip_address, old_dest_stats));
 
 						ip_to_thread_map[ip_address] = old_thread_id;
 
-						// LOL
 						handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.erase(
 							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(ip_address)
 						);
