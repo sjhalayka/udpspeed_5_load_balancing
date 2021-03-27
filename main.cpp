@@ -450,8 +450,9 @@ int main(int argc, char** argv)
 				client_address.byte2 = their_addr.sin_addr.S_un.S_un_b.s_b3;
 				client_address.byte3 = their_addr.sin_addr.S_un.S_un_b.s_b4;
 
-				// Use a pseudorandom IP to emulate many clients
-				// This is to be used only for testing purposes
+				// Instead of using the client's actual IP address, use a pseudorandom IP
+				// address to emulate many hundreds or thousands of clients
+				// This is useful for testing purposes
 				//client_address.byte0 = 127;
 				//client_address.byte1 = 0;
 				//client_address.byte2 = 0; //mt_rand() % 256;
@@ -467,11 +468,12 @@ int main(int argc, char** argv)
 
 					ip_to_thread_map[client_address] = thread_index;
 
+					// Add new job
 					handlers[thread_index].m.lock();
 					handlers[thread_index].jobstats[client_address].ip_addr = client_address;
 					handlers[thread_index].m.unlock();
 				}
-				else
+				else // Job already exists
 				{
 					// Look up thread index
 					thread_index = ip_to_thread_map[client_address];
