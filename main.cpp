@@ -609,7 +609,7 @@ int main(int argc, char** argv)
 					if (false == found_candidate)
 						break;
 
-					// If the candidate thread (most busiest) is the last element in the vector (least busiest), then abort
+					// If the candidate thread (most busiest) is also the last element in the vector (least busiest), then abort
 					if (candidate_thread_id == thread_loads_vec[thread_loads_vec.size() - 1].thread_id)
 						break;
 
@@ -631,11 +631,11 @@ int main(int argc, char** argv)
 					if (job_iter == handlers[candidate_thread_id].jobstats.end())
 						break;
 
-					// Back up and add job
+					// Back up and add new job
 					stats old_dest_stats = job_iter->second;
 					handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.insert(*job_iter);
 
-					// Back up and assign IP
+					// Back up and assign new IP
 					size_t old_thread_id = ip_to_thread_map[job_iter->second.ip_addr];
 					IPv4_address ip_address = job_iter->second.ip_addr;
 					ip_to_thread_map[job_iter->second.ip_addr] = thread_loads_vec[thread_loads_vec.size() - 1].thread_id;
@@ -665,7 +665,7 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					// Finally, we found (a probably local) minimum -- revert back to it and then abort
+					// Finally, we found a minimum -- revert back to it and then abort
 					if (standard_deviation(bps) >= pre_std_dev)
 					{
 						// Undo changes
@@ -673,6 +673,7 @@ int main(int argc, char** argv)
 
 						ip_to_thread_map[ip_address] = old_thread_id;
 
+						// LOL
 						handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.erase(
 							handlers[thread_loads_vec[thread_loads_vec.size() - 1].thread_id].jobstats.find(ip_address)
 						);
