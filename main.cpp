@@ -590,7 +590,7 @@ int main(int argc, char** argv)
 						thread_loads_vec[t] = tl;
 					}
 					
-					// Sort in reverse order by total
+					// Sort in reverse order by total (sort descending in terms of busy-ness)
 					sort(thread_loads_vec.rbegin(), thread_loads_vec.rend());
 
 					// Find candidate (busiest) thread
