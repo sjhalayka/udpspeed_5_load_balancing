@@ -451,10 +451,10 @@ int main(int argc, char** argv)
 				client_address.byte3 = their_addr.sin_addr.S_un.S_un_b.s_b4;
 
 				// Instead of using the client's actual IP address, use a pseudorandom 
-				// IP address to emulate many hundreds or thousands of clients
+				// IP address to emulate many hundreds or thousands or millions of clients
 				// This is useful for testing purposes
 				//client_address.byte0 = 127;
-				//client_address.byte1 = 0;
+				//client_address.byte1 = 0; //mt_rand() % 256;
 				//client_address.byte2 = 0; //mt_rand() % 256;
 				//client_address.byte3 = mt_rand() % 256;
 
