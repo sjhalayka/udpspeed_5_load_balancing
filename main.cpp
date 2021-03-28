@@ -475,10 +475,10 @@ int main(int argc, char** argv)
 				// Instead of using the client's actual IP address, use a pseudorandom 
 				// IP address to emulate many hundreds or thousands or millions of clients
 				// This is useful for testing purposes
-				//client_address.byte0 = 127;
-				//client_address.byte1 = 0; //mt_rand() % 256;
-				//client_address.byte2 = 0; //mt_rand() % 256;
-				//client_address.byte3 = mt_rand() % 256;
+//				client_address.byte0 = 127;
+//				client_address.byte1 = mt_rand() % 256;
+//				client_address.byte2 = mt_rand() % 256;
+//				client_address.byte3 = mt_rand() % 256;
 
 				size_t thread_index = 0;
 
@@ -577,7 +577,7 @@ int main(int argc, char** argv)
 
 					// Get pre-move mean and standard deviation
 					double average = 0;
-					vector<double> bps;
+					vector<double> Mbits;
 
 					for (size_t t = 0; t < num_threads; t++)
 					{
@@ -588,14 +588,14 @@ int main(int argc, char** argv)
 
 						per_thread_total_bps *= mbits_factor;
 
-						bps.push_back(per_thread_total_bps);
+						Mbits.push_back(per_thread_total_bps);
 
 						average += per_thread_total_bps;
 					}
 
 					average /= num_threads;
 
-					cout << "During load balancing, the mean is: " << average << " +/- " << standard_deviation(bps) << " Mbits/second" << endl;
+					cout << "During load balancing, the mean is: " << average << " +/- " << standard_deviation(Mbits) << " Mbits/second" << endl;
 
 					// Enumerate thread loads
 					vector<thread_loads> thread_loads_vec(num_threads);
@@ -669,10 +669,10 @@ int main(int argc, char** argv)
 					handlers[candidate_thread_id].jobstats.erase(job_iter);
 
 					// Get post-move mean and standard deviation
-					double pre_std_dev = standard_deviation(bps);
+					double pre_std_dev = standard_deviation(Mbits);
 
 					average = 0;
-					bps.clear();
+					Mbits.clear();
 
 					for (size_t t = 0; t < num_threads; t++)
 					{
@@ -683,7 +683,7 @@ int main(int argc, char** argv)
 
 						per_thread_total_bps *= mbits_factor;
 
-						bps.push_back(per_thread_total_bps);
+						Mbits.push_back(per_thread_total_bps);
 
 						average += per_thread_total_bps;
 					}
@@ -691,7 +691,7 @@ int main(int argc, char** argv)
 					average /= num_threads;
 
 					// Finally, we found a minimum -- revert back to it and then abort
-					if (standard_deviation(bps) >= pre_std_dev)
+					if (standard_deviation(Mbits) >= pre_std_dev)
 					{
 						// Undo move
 						handlers[candidate_thread_id].jobstats.insert(std::pair<IPv4_address, stats>(ip_address, old_dest_stats));
@@ -704,7 +704,7 @@ int main(int argc, char** argv)
 
 						// Get final mean and standard deviation
 						average = 0;
-						bps.clear();
+						Mbits.clear();
 
 						for (size_t t = 0; t < num_threads; t++)
 						{
@@ -715,14 +715,14 @@ int main(int argc, char** argv)
 
 							per_thread_total_bps *= mbits_factor;
 
-							bps.push_back(per_thread_total_bps);
+							Mbits.push_back(per_thread_total_bps);
 
 							average += per_thread_total_bps;
 						}
 
 						average /= num_threads;
 
-						cout << "After load balancing, the mean is:  " << average << " +/- " << standard_deviation(bps) << " Mbits/second" << endl;
+						cout << "After load balancing, the mean is:  " << average << " +/- " << standard_deviation(Mbits) << " Mbits/second" << endl;
 
 						// Success!
 						break;
