@@ -572,8 +572,8 @@ int main(int argc, char** argv)
 					// Basically, this loop body finds the busiest thread, and then moves that thread's smallest non-zero job
 					// to the least busiest thread
 					// Once the move has occurred, the new post-move standard deviation is compared to the old pre-move standard deviation,
-					// and if the new post-move standard deviation is greater than the old pre-move standard deviation, then the move is undone
-					// and the algorithm is finished because the (perhaps local) minimum has been found
+					// and if the new post-move standard deviation is greater than or equal to the old pre-move standard deviation, then the 
+					// move is undone and the algorithm is finished because the (perhaps local) minimum has been found
 
 					// Get pre-move mean and standard deviation
 					double average = 0;
