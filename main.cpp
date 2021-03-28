@@ -93,13 +93,13 @@ bool init_winsock(void)
 
 	if (WSAStartup(ver_requested, &wsa_data))
 	{
-		cout << "Could not initialize Winsock 2.2.";
+		cout << "  Could not initialize Winsock 2.2.";
 		return false;
 	}
 
 	if (LOBYTE(wsa_data.wVersion) != 2 || HIBYTE(wsa_data.wVersion) != 2)
 	{
-		cout << "Required version of Winsock (2.2) not available.";
+		cout << "  Required version of Winsock (2.2) not available.";
 		return false;
 	}
 
@@ -254,7 +254,7 @@ void thread_func(atomic_bool& stop, atomic_bool& thread_done, map<IPv4_address, 
 				// and so this entire if {} can generally be commented out to save on a few CPU cycles
 				//if (jobstats.find(packets[i].sender_ip_addr) == jobstats.end())
 				//{
-				//	cout << "Mismanaged packet" << endl;
+				//	cout << "  Mismanaged packet" << endl;
 				//	continue;
 				//}
 
@@ -294,7 +294,7 @@ public:
 
 		while (false == thread_done)
 		{
-			// cout << "Waiting for thread to return" << endl;
+			// cout << "  Waiting for thread to return" << endl;
 		}
 
 		t.join();
@@ -473,8 +473,8 @@ int main(int argc, char** argv)
 				client_address.byte3 = their_addr.sin_addr.S_un.S_un_b.s_b4;
 
 				// Instead of using the client's actual IP address, use a pseudorandom 
-				// IP address to emulate many hundreds or thousands or millions of clients
-				// This is useful for testing purposes
+				// IP address on the local network to emulate many hundreds or thousands
+				// or millions of clients -- this is useful for testing purposes
 //				client_address.byte0 = 127;
 //				client_address.byte1 = mt_rand() % 256;
 //				client_address.byte2 = mt_rand() % 256;
@@ -563,7 +563,7 @@ int main(int argc, char** argv)
 						}
 					}
 
-					cout << "Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbits/second" << endl;
+					cout << "  Thread " << t << ' ' << per_thread_total_bps * mbits_factor << " Mbits/second" << endl;
 				}
 
 				// Do load balancing -- work with units of Mbits/second because we will be printing the data to the screen
@@ -595,7 +595,7 @@ int main(int argc, char** argv)
 
 					average /= num_threads;
 
-					cout << "During load balancing, the mean is: " << average << " +/- " << standard_deviation(Mbits) << " Mbits/second" << endl;
+					cout << "  During load balancing, the mean is: " << average << " +/- " << standard_deviation(Mbits) << " Mbits/second" << endl;
 
 					// Enumerate thread loads
 					vector<thread_loads> thread_loads_vec(num_threads);
@@ -722,7 +722,7 @@ int main(int argc, char** argv)
 
 						average /= num_threads;
 
-						cout << "After load balancing, the mean is:  " << average << " +/- " << standard_deviation(Mbits) << " Mbits/second" << endl;
+						cout << "  After load balancing, the mean is:  " << average << " +/- " << standard_deviation(Mbits) << " Mbits/second" << endl;
 
 						// Success!
 						break;
